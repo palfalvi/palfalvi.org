@@ -1,0 +1,28 @@
+---
+title: Starting with blogdown
+author: Gergo Palfalvi
+date: '2017-03-07'
+slug: starting-with-blogdown
+categories:
+  - post
+tags:
+  - R
+  - start
+  - blogdown
+  - RStudio
+summary: "So it started... again."
+---
+
+<!-- BLOGDOWN-HEAD -->
+<!-- /BLOGDOWN-HEAD -->
+
+<!-- BLOGDOWN-BODY-BEFORE -->
+<!-- /BLOGDOWN-BODY-BEFORE -->
+<p>So it started… again. This is not my first attempt to create a blog for data science and R, but previously I was trying with <a href="https://jekyllrb.com">Jekyll pages</a>. It looked very nice after the long struggle of setups, I was very happy with it. I used to post my R class presentations there for easy access to attendees.</p>
+<p>There was only one very bothering thing, there was no possibility to use R markdown directly, I always had to transfer to .md files, dealing with static images and so. Since I use <a href="https://www.rstudio.com">RStudio</a> continuously to my work, I decided to try <a href="https://yihui.name">Yihui Xie’s</a> <code>blogdown</code> package with Hugo. I have to say, the installation was very seamless, just a few lines of code in R and a little git and viola, it works.</p>
+<pre class="r"><code>devtools::install_github(&#39;rstudio/blogdown&#39;)
+blogdown::install_hugo()
+blogdown::new_site()</code></pre>
+<p>Generally that’s all to initialize a blog. Of course there is much more to do, you have to choose your theme, configure the <code>config.toml</code> file, creating a github repository (if you wish to use github pages) and so on. If you really interested to make your own blog with Hugo and Blogdown, I can recommend <a href="https://proquestionasker.github.io/blog/Making_Site/">this</a> post from Amber Thomas, which was really helpful for me.</p>
+<p>Also check <a href="https://yihui.name">Yihui Xie</a> and his <a href="https://github.com/yihui/">github repos</a>, like <code>knit</code>, <code>bookdown</code> and <code>xaringan</code>. If you are documenting your research/analysis, making a book, presentation or a blog, these can be very handy. He also writes a <a href="https://bookdown.org/yihui/blogdown/">book on blogdown</a>, however this is far from finished.</p>
+<p>Also from now I would like to focus on more detailed data science workflows, especially used in biology, instead of starting from the the very basics of R. See you soon in the next posts!</p>

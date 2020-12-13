@@ -1,0 +1,140 @@
+---
+title: Local BLAST from R
+author: Gergo Palfalvi
+date: '2017-03-09'
+categories:
+  - primeR
+  - shiny
+tags:
+  - R
+  - Shiny
+  - bioinformatics
+  - blast
+slug: local-blast-from-r
+summary: In the [previous post](https://palfalvi.github.io/post/shiny-website-for-primer-documentation/)
+  I discussed a bigger project, now let's see a smaller part of it, learn how to control
+  local BLAST search from R and get back the information from it for further processing.
+---
+
+<!-- BLOGDOWN-HEAD -->
+<!-- /BLOGDOWN-HEAD -->
+
+<!-- BLOGDOWN-BODY-BEFORE -->
+<!-- /BLOGDOWN-BODY-BEFORE -->
+<p>In the <a href="https://palfalvi.github.io/post/shiny-website-for-primer-documentation/">previous post</a> I discussed a bigger project, now let’s see a smaller part of it. <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi">BLAST</a> (or <strong>B</strong>asic <strong>L</strong>ocal <strong>A</strong>lignment <strong>S</strong>earch <strong>T</strong>ool) is defined on its webpage as:</p>
+<p>{{% alert note %}} <strong>BLAST</strong> finds regions of similarity between biological sequences. The program compares nucleotide or protein sequences to sequence databases and calculates the statistical significance. {{% /alert %}}</p>
+<p>Most of the cases it is used for finding similar sequences (~genes) from other, well-annotated, online available organisms and in this case the web interface is perfect. However if we want to use for more heavy jobs or with custom databases, then there is an option to download executable and run in a local machine (or on a server of course). In our case the database will be built from the primers, which is only available locally, so we need to use this option. If you want to download follow the instructions <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&amp;PAGE_TYPE=BlastDocs&amp;DOC_TYPE=Download">here</a>.</p>
+<p>{{% alert note %}} There is a also an <a href="https://www.ncbi.nlm.nih.gov/IEB/ToolBox/CPP_DOC/">NCBI C++ toolkit</a>, which contains a web BLAST API we could access through <a href="http://dirk.eddelbuettel.com/code/rcpp.html">Rcpp</a>, but in that case we could only use the online available databases, which is not our purpose here. {{% /alert %}}</p>
+<p>As we installed we have access through <code>/path/to/blast/ncbi-blast-2.6.0+/bin/blastn</code> for blastn (nucleotide BLAST). It is nice, but what we want is to control from R. If someone submit a sequence in the Shiny interface, that is sent to BLAST on the system, then the result come back to R. Fortunately in R there are some command for this, namely <code>system()</code> and <code>system2()</code>.</p>
+<p>The differences between the two generally is how to give the command line arguments. In <code>system()</code>, you insert one string as you would do in a Unix-alike shell. In <code>system2()</code> the <code>command</code> argument holds only the command name you wish to run and the <code>arg</code> argument contains a character vector of the command’s argument. Let me show in an example where you would like to run:</p>
+<pre class="bash"><code>&gt;  /path/to/blast/ncbi-blast-2.6.0+/bin/blastn -db blast_database -query input.fasta -outfmt 6 -evalue 1e-6 -ungapped</code></pre>
+<p>In R it looks like these.</p>
+<pre class="r"><code>system(command = &quot;/path/to/blast/ncbi-blast-2.6.0+/bin/blastn -db blast_database -query input.fasta -outfmt 6 -evalue 1e-6 -ungapped&quot;)
+
+system2(command = &quot;/path/to/blast/ncbi-blast-2.6.0+/bin/blastn&quot;, 
+        args = c(&quot;-db blast_database -query input.fasta -outfmt 6 -evalue 10e-6 -ungapped&quot;))</code></pre>
+<p>The good point in <code>system2()</code> is the possibility we can more easily manipulate the arguments (and the connection is also better).</p>
+<pre class="r"><code>blastn = &quot;/path/to/blast/ncbi-blast-2.6.0+/bin/blastn&quot;
+blast_db = &quot;blast_database&quot;
+input = &quot;input_file&quot;
+evalue = 1e-6
+format = 6
+
+system2(command = blastn, 
+        args = c(&quot;-db&quot;, blast_db, 
+                 &quot;-query&quot;, input, 
+                 &quot;-outfmt&quot;, format, 
+                 &quot;-evalue&quot;, evalue, 
+                 &quot;-ungapped&quot;))</code></pre>
+<p>It is very promising so far, but we need to capture the output in R. For this we have to use <code>wait = TRUE</code>. Then R will wait until this process is finished, not just send out the task and go on the next line. also set the <code>stdout</code> (standard output) to capture the result as a character vector, otherwise it is sent to the R console. Let’s capture this in the <code>blast_out</code> object.</p>
+<pre class="r"><code>blast_out &lt;- system2(command = blastn, 
+                     args = c(&quot;-db&quot;, blast_db, 
+                              &quot;-query&quot;, input, 
+                              &quot;-outfmt&quot;, format, 
+                              &quot;-evalue&quot;, evalue,
+                              &quot;-ungapped&quot;),
+                     wait = TRUE,
+                     stdout = TRUE)</code></pre>
+<p>So far so good, but if you look in the <code>blast_out</code> object, it should look like something like this:</p>
+<pre><code>[1] &quot;Homo_Lin28A\tENST00000254231.4\t100.00\t207\t0\t0\t1\t207\t121\t327\t2e-110\t  398&quot; 
+[2] &quot;Homo_Lin28A\tENST00000326279.10\t100.00\t207\t0\t0\t1\t207\t121\t327\t2e-110\t  398&quot;</code></pre>
+<p>It is not exactly what we wanted. We would like to have some kind of data frame, but as you can see the output is literally a tabular formatted output captured in a character vector. But no worries, we have some tricks here.</p>
+<div id="classical-way" class="section level2">
+<h2>“Classical” way</h2>
+<p>The <code>textConnection</code> function needs an input text, then it is copied to create a connection object. For detailed information write <code>?textConnection</code>. From this connection we can use <code>read.table()</code> to create a data frame.</p>
+<pre class="r"><code>blast_out &lt;- read.table(textConnection(blast_out))</code></pre>
+<p>And we have a data frame with the blast output.</p>
+<p>{{% alert warning %}} Surprisingly the <code>readr</code> package (e.g. <code>read_tsv()</code>) cannot read from this connection due to its non-binary state. (Or at least I could not figure out how.) {{% /alert %}}</p>
+</div>
+<div id="the-tidy-way" class="section level2">
+<h2>The “tidy” way</h2>
+<p>If we want to work and stay in the <a href="http://tidyverse.org">tidyverse</a> and create a tibble, there are two options. The first is to follow the codes above and use <code>as_tibble()</code> or from the original <code>blast_out</code> character vector proceed with <code>as_tibble()</code> and <code>separate()</code> based on the <code>\t</code>.</p>
+<pre class="r"><code>library(tidyverse)
+
+tidy_blast &lt;- blast_out %&gt;% 
+  textConnection() %&gt;% 
+  read.table() %&gt;%
+  as_tibble() </code></pre>
+<p>Or (Personally I like this the best)</p>
+<pre class="r"><code> colnames &lt;- c(&quot;qseqid&quot;,
+               &quot;sseqid&quot;,
+               &quot;pident&quot;,
+               &quot;length&quot;,
+               &quot;mismatch&quot;,
+               &quot;gapopen&quot;,
+               &quot;qstart&quot;,
+               &quot;qend&quot;,
+               &quot;sstart&quot;,
+               &quot;send&quot;,
+               &quot;evalue&quot;,
+               &quot;bitscore&quot;)
+  
+tidy_blast &lt;- blast_out %&gt;%
+  as_tibble() %&gt;% 
+  separate(col = value, 
+           into = colnames,
+           sep = &quot;\t&quot;,
+           convert = TRUE)</code></pre>
+<p>Great, now we have a nice data frame/tibble with all the blast outputs we can process, manipulate, plot, etc all in R.</p>
+<pre class="r"><code>tidy_blast</code></pre>
+<pre><code>## # A tibble: 2 × 12
+##        qseqid                 sseqid pident length mismatch gapopen qstart
+## *       &lt;chr&gt;                  &lt;chr&gt;  &lt;dbl&gt;  &lt;int&gt;    &lt;int&gt;   &lt;int&gt;  &lt;int&gt;
+## 1 Homo_Lin28A  HomoENST00000254231.4    100    207        0       0      1
+## 2 Homo_Lin28A HomoENST00000326279.10    100    207        0       0      1
+## # ... with 5 more variables: qend &lt;int&gt;, sstart &lt;int&gt;, send &lt;int&gt;,
+## #   evalue &lt;dbl&gt;, bitscore &lt;int&gt;</code></pre>
+<p>Put together all and we will got this, without any intermediate object.</p>
+<pre class="r"><code>blastn = &quot;/path/to/blast/ncbi-blast-2.6.0+/bin/blastn&quot;
+blast_db = &quot;blast_database&quot;
+input = &quot;input_file&quot;
+evalue = 1e-6
+format = 6
+colnames &lt;- c(&quot;qseqid&quot;,
+               &quot;sseqid&quot;,
+               &quot;pident&quot;,
+               &quot;length&quot;,
+               &quot;mismatch&quot;,
+               &quot;gapopen&quot;,
+               &quot;qstart&quot;,
+               &quot;qend&quot;,
+               &quot;sstart&quot;,
+               &quot;send&quot;,
+               &quot;evalue&quot;,
+               &quot;bitscore&quot;)
+
+blast_out &lt;- system2(command = &quot;blastn&quot;, 
+                     args = c(&quot;-db&quot;, blast_db, 
+                              &quot;-query&quot;, input, 
+                              &quot;-outfmt&quot;, format, 
+                              &quot;-evalue&quot;, evalue,
+                              &quot;-ungapped&quot;),
+                     wait = TRUE,
+                     stdout = TRUE) %&gt;%
+  as_tibble() %&gt;% 
+  separate(col = value, 
+           into = colnames,
+           sep = &quot;\t&quot;,
+           convert = TRUE)</code></pre>
+<p>From here we can put all of these in a function, even extend the blast options on your wish and use in our everyday analysis or as me, put this on a Shiny website with some extra feature we will discuss later on. In the next post I plan to continue on the visualization of the blast output.</p>
+</div>

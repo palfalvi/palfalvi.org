@@ -1,0 +1,30 @@
+---
+title: Starting with blogdown
+author: Gergo Palfalvi
+date: '2017-03-07'
+slug: starting-with-blogdown
+categories:
+  - post
+tags:
+  - R
+  - start
+  - blogdown
+  - RStudio
+summary: "So it started... again."
+---
+
+So it started... again. This is not my first attempt to create a blog for data science and R, but previously I was trying with [Jekyll pages](https://jekyllrb.com). It looked very nice after the long struggle of setups, I was very happy with it. I used to post my R class presentations there for easy access to attendees. 
+
+There was only one very bothering thing, there was no possibility to use R markdown directly, I always had to transfer to .md files, dealing with static images and so. Since I use [RStudio](https://www.rstudio.com) continuously to my work, I decided to try [Yihui Xie's](https://yihui.name) ```blogdown``` package with Hugo. I have to say, the installation was very seamless, just a few lines of code in R and a little git and viola, it works. 
+
+```{r, eval = FALSE}
+devtools::install_github('rstudio/blogdown')
+blogdown::install_hugo()
+blogdown::new_site()
+```
+
+Generally that's all to initialize a blog. Of course there is much more to do, you have to choose your theme, configure the ```config.toml``` file, creating a github repository (if you wish to use github pages) and so on. If you really interested to make your own blog with Hugo and Blogdown, I can recommend [this](https://proquestionasker.github.io/blog/Making_Site/) post from Amber Thomas, which was really helpful for me. 
+
+Also check [Yihui Xie](https://yihui.name) and his [github repos](https://github.com/yihui/), like ```knit```, ```bookdown``` and ```xaringan```. If you are documenting your research/analysis, making a book, presentation or a blog, these can be very handy. He also writes a [book on blogdown](https://bookdown.org/yihui/blogdown/), however this is far from finished.  
+
+Also from now I would like to focus on more detailed data science workflows, especially used in biology, instead of starting from the the very basics of R. See you soon in the next posts!

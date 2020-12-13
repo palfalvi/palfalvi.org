@@ -1,0 +1,60 @@
+---
+title: Shiny Website for Primer Documentation
+author: Gergo Palfalvi
+date: '2017-03-07'
+slug: shiny-website-for-primer-documentation
+draft: false
+categories:
+  - shiny
+  - primeR
+tags:
+  - R
+  - RStudio
+  - Shiny
+  - database
+  - bioinformatics
+summary: "Create a [Shiny](http://shiny.rstudio.com) webpage on a server to automatically maintain and protect primers' database with some extra function and a highly user-friendly interface."
+---
+
+<script src="/rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
+<link href="/rmarkdown-libs/vis/vis.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/vis/vis.min.js"></script>
+<script src="/rmarkdown-libs/visNetwork-binding/visNetwork.js"></script>
+
+<p>I am working in a relatively big molecular biology laboratory where sometimes the common stocks and orders documentation can be a hassle. Recently I ran into one of this problem and decided to change the way to maintain a documentation of our oligonucleotide storage.</p>
+<p>{{% alert note %}} If you are not familiar with the term <a href="https://en.wikipedia.org/wiki/Primer_(molecular_biology)"><em>primer</em></a> and <a href="https://en.wikipedia.org/wiki/Oligonucleotide"><em>oligonicleotide</em></a>, start on Wikipedia. {{% /alert %}}</p>
+<p>Since we keep track every single ordered oligonucleotide this laboratory ordered, now there are more then 10.000 records. Until now they deployed to a shared Excel file on a common server. There was several problem with this method, let me highlight a few:</p>
+<ul>
+<li>You have to manually add the unique identifier for the tube (a number, indicating the location to be stored). It resulted duplicated, skipped and even mistyped IDs.</li>
+<li>You have to write the sequence manually or with Copy-Paste.</li>
+<li>You can write any silly abbreviation for your name. Also can cause unidentifiable authors or authors with several types of entry names.</li>
+<li>If someone left it open on their machine, others cannot edit until it is not closed.</li>
+<li>Difficult to run BLAST. If a lab already has 10.000+ primers, sometimes you just look up what you need instead of ordering new ones. <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi">BLAST</a> can do this job, but it is not so convenient to update a local BLAST database from excel every time someone deploy some new records (a few times a day).</li>
+<li>It is Excel.</li>
+<li>Again. It is Excel. Anyone easily could delete a few lines or even the whole document. No authorized access for any type of editing.</li>
+</ul>
+<p>Considering these, I decided to create a <a href="http://shiny.rstudio.com">Shiny</a> webpage on our local server to automatically maintain and protect this database with some extra function and a highly user-friendly interface. I also would be able to distribute a backbone from this site on github if anyone has similar problems or just wants to use. Since this is a bigger project to put in one post and also some part is highly personalized to our laboratory, I will cover only some important parts, like some specific plotting and data processing, how to build up a shiny app within several posts.</p>
+<div id="the-basic-ideas-behind-the-webpage" class="section level2">
+<h2>The basic ideas behind the webpage</h2>
+<ol style="list-style-type: decimal">
+<li><p>I would like to store the primer information in a database instead of a <code>.csv</code> or <code>.xls</code> file. My main candidates for this is <a href="https://www.postgresql.org">postgreSQL</a> or <a href="https://www.sqlite.org">SQLite</a>, but it could be changed freely later.</p></li>
+<li><p>I want an interface where people can deploy primers even by manually or uploading a file (which is usually provided by the company we order from). This also should auto generate the unique IDs for the tubes.</p></li>
+<li><p>Ability to build a BLAST database from the database (probably through a <code>.fasta</code> file). This also should be triggered every time when new records are submitted (e.g. by button press or by monitoring the database time stamp).</p></li>
+<li><p>Ability to access the server’s BLAST engine from R/Shiny and to process the output in real time.</p></li>
+<li><p>A view window for browsing among existing primers.</p></li>
+<li><p>Following up on availability of the primer. If someone finished a tube, make it possible to indicate it with also a possible reordering option and connecting the unique IDs.</p></li>
+<li><p>Overcome all of the cons mentioned above.</p></li>
+</ol>
+<p>Here is a diagram (created with the <a href="http://rich-iannone.github.io/DiagrammeR/">DiagrammeR</a> package) about the core ideas:</p>
+<div id="htmlwidget-c990278410b71d556446" style="width:672px;height:480px;" class="visNetwork html-widget"></div>
+<script type="application/json" data-for="htmlwidget-c990278410b71d556446">{"x":{"nodes":{"id":[1,2,3,4,5,6,7],"group":["A","A","A","A","A","A","B"],"label":["Primer Data Table \n (postgreSQL/\nSQLite)","New primer input","Create .fasta","Update blast database","BLAST search input","BLAST search output","Update"],"shape":["database","ellipse","box","box","ellipse","ellipse","circle"],"style":["filled","filled","filled","filled","filled","filled","filled"],"color":["limegreen","orange","dodgerblue","dodgerblue","orange","orange","pink"],"font.size":[20,20,20,20,20,20,20],"shadow.enabled":[true,true,true,true,true,true,true],"shadow.size":[10,10,10,10,10,10,10],"shadow...":["","","","","","",""],"shadow....1":["","","","","","",""],"shadow....2":["","","","","","",""],"shadow....3":["","","","","","",""],"shadow....4":["","","","","","",""],"smooth":[true,true,true,true,true,true,true],"level":[1,4,2,2,4,4,3]},"edges":{"id":[1,2,3,4,5,6,7,8],"from":[2,2,1,7,7,3,5,4],"to":[1,7,3,3,4,4,4,6],"label":["","","","","","","",""]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"edges":{"arrows":{"to":{"enabled":true,"scaleFactor":1}}},"physics":{"stabilization":{"enabled":true,"onlyDynamicEdges":false,"fit":true}},"layout":{"improvedLayout":true,"hierarchical":{"enabled":true,"levelSeparation":270,"direction":"LR","sortMethod":"directed"}}},"groups":["A","B"],"width":null,"height":null,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null},"evals":[],"jsHooks":[]}</script>
+</div>
+<div id="extra-functions" class="section level2">
+<h2>Extra functions</h2>
+<ul>
+<li>Create new primers using <a href="http://primer3.ut.ee">Primer3</a> (and BLAST) in-app. For this, we have to manipulate the UNIX command line application from R. Luckily it is not so difficult.</li>
+</ul>
+<p>Extending this possibility we can even search for gRNAs for our CRISPR experiments with non-model genomes we work with. And also just for keep everything nicely in one place.</p>
+<hr />
+<p>In the next post I would like to show how to recreate an interactive graphical output from a BLAST search result, similar as you can see on the <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi">BLAST</a> website after performing a search.</p>
+</div>

@@ -1,0 +1,185 @@
+---
+title: Q&A time
+author: Gergo Palfalvi
+date: '2017-10-11'
+slug: q-a-time
+categories:
+  - Biology
+tags:
+  - bioinformatics
+  - nature
+  - science
+summary: Recently I got the opportunity to attend to SOKENDAI's Freshmen course. Here I summarise the questions and answers I got on my presentation.
+---
+
+Recently I got the opportunity to attend to [SOKENDAI's](https://www.soken.ac.jp/en/) Freshmen course as a student committee member with 7 other students from various fields (from ethnomusicology, through space science to informatics). We helped to organize some activity to warm up new students and also presented our research fields. I really enjoyed to interact with nearly 50 new internation students, who just started their life in Japan. I hope I could make enough effort to help them enjoy these few days. 
+
+In this post I would like to anser all the questions I got after my presentation, since we did not have time for everyone's question. If you have any other question, you can ask me in comment or through e-mail. Let's see the questions:
+
+**1. Why did you choose pitcher plant?**
+
+I was really amazed by carnivorous plants since I was a child. On science they catched me because of their complexity, elegancy and mistery. 
+
+**2. Please tell me, how do you spend your free time.**
+
+I like cooking, especially with my girlfriend. Also I watch several series, go out to explore the neighbourhood or just read.
+
+**3. Is digestion mechanism of carnivorous plants same as ours?**
+
+Actually there is a lot of similarities, like the very acidic fluid with several hydrolases, however the actual enzyme set differs between animals and plants. Also carnivorous plants can use H<sub>2</sub>O<sub>2</sub> and specific plant enzymes, like chitinase. 
+
+**4. How do you distinguish phenotype you observed was evolution not mutation?**
+
+Mutation is random, and cannot set up a whole new organ with reproductive development. However evolution is a consequence from chains of mutations and selections. 
+
+**5. Have you ever observed pitcher plant in real or some other plants with similar nature?**
+
+Unfortunatelly I could never see Albany pitcher plant _in situ_ in Australia, but i saw several other carnivorous plants in Australia, Hungary, Japan and Romania. 
+
+**6. I used to think that biology students have to collect the plants by themselves and go back to the lab to study them. So how do you work in your lab?**
+
+I do not collect my plants from wild, the easiest way is to purchase from a certified nursery or research center. For genetic/genomic/molecular biology studies we also try to keep the genetic background unchanged. It means, we established a line, and we maintain that with vegetative propagation.
+
+**7. What will you do after you finish this research topic?**
+
+I think to finish the whole topic is impossible. In science if we generate an answer, that will trigger several new questions. I already have some questions I would like to answer in the future. Also I can recommend to always think in a "plan B", if something unexpected delay happens with your main work.
+
+**8. How do you assign your time respectively for research in lab and entertainment outside?**
+
+I do had to force myself to regulate my time. Continuous overworking is not effective, your brain and mind will be tired and cannot work as well as a fresh mind. My rule is to try to finish work between 5pm and 7pm (I start at 9am) and avoid to work on weekends. 
+
+**9. How is the distribution of the pitcher plant in the world?**
+
+There are 3 main pitcher plants in different families. The one I am working with ( _Cephalotus_) is from a very limited habitat in SW-Australia. _Nepenthes_ is the tropical pitcher plant, can be found in Indonesia, NE-Australia, India and Madagascar. The third type of pitcher plants are _Sarracenia_ and _Darlingtonia_ from North-America and _Heliamphora_ from S-America. 
+
+**10. How do you study different academic areas and integrate them?**
+
+It is a bit difficult to keep up with several communities, but you can benefit a lot if you understand several disciplina and can breed them to create something new and outstanding. As for data science, statistics and informatics, there are loads of online resources and active communities you can ask and learn from. 
+
+**11. Can you explain more about genome?**
+
+Genome is the DNA content in a cell, which codes in a chemical sequence the informatin needed to regulate and express genes. Genes will eventually produce proteins, which are the "workers" of the cells, making structures, regulations, signal perceptions and transductions, catalyse metabolic precesses and so on. 
+
+If you follow my book analogy, then the genome is the dictionary: contains the words (genes) and the description, how to use them. 
+If you would like to process to a specific developmental process, like making skin cells, you need to know which words/genes you should use and in what order, in what context. Finally you got a bunch of words and expression in an appropriate order. A book about "How to make skin cells". 
+
+**12. What challanges do you face in your research?**
+
+There is a lot. Probably the biggest challange is to establish a new model organism and produce enough reliable result to be useful not only for me, but for future researchers.
+
+**13. Is transcriptome of pitcher leaf and flat leaf known? If so, what differences did you find?**
+
+It is known and described in our paper: 
+Fukushima et al, Genome of the pitcher plant Cephalotus reveals genetic changes associated with carnivory, Nature Ecology & Evolution (2017).
+
+In shortly, pitcher has a lot of digestive-related enzymes, higher wax synthesis, while flat leaf has higher rate of photosynthetic genes' expression. In more details it is still under investigation.
+
+**14. Why are you interested in biology?**
+
+I was very impressed with the complexity of life and would like to understand how this complexity evolved and works.
+
+**15. Do you specifically study the interactions of genes that affect the formation of either a pitcher or a flat leaf?**
+
+I study how different environmental factors affect gene expression (including all genes) and how it is corresponds to phenotypic answer. Eventually I would like to find the regulatory mechanisms how a pitcher can form. 
+
+**16. After one leaf dies, does the new leaf become the same type of leaf or change the leaf type depending on environment?**
+
+It is independent of previous leaf types, the plant integrates current environmental signals and make a new decision for the newly developing leaves continously. 
+
+**17. How interesting do you find to work with carnivorous plants?**
+
+I am amazed by carnivorous plants and really glad I could start my PhD working on the topic I choosed. This passion gives higher motivation on work for me. 
+
+**18. Are there any applications of this research in human systems?**
+
+As for the bioinformatics part in developmental process in genomic context, mammalian white blood cell differentiation is the mainstream with single cell transcriptome analysis. I hope the analysis method I construct will be applicable for any organisms. 
+
+**19. Is basic biology only contains plants?**
+
+No. You can work with animals, plants, fungi, bacteria but even with only theoretical biology or computer simulation you can work on questions from basic biology. 
+
+**20. Have you ever been stuck in research? How did you deal with that?**
+
+Yes, of course. In my opinion there are two ways to deal with this situation. First, you should leave it for a while. For a few days or weeks and work on some other part until that. After you go back for the part you struggled, you can think in a different angle or with new ideas in this case. The second method is more difficult for some cases, because this method is to ask help from others. Do not hesitate to discuss your problem with professors, postdocs, but even with other students or friends. 
+
+**21. Why _Cephalotus_ relies on stocahstic determination of two leaf types rather then pure genetic way?**
+
+It is pure genetic way. For differentiation you often need external factors to decide the cell fate, which can come from environmental factors (like how temperature decides the sex of a crocodile in the egg) or from cell-cell interactins, like how white blood cells are differentiating continuously in your body based on the properties of neighbouring cells, or from internal, chemical environment, like pH or hormones, like how plant vascular elemts are differentiating. The stochastic property comes from the fluctuation of several internal- and external factors. 
+
+**22. Can we measure the amount of data stored in a single cell?**
+
+Using real single cells for genomic or transcriptomic studies is not impossible but also not easy. Current limiting factors contain the difficulty to isolate intact single cells from their tissue context without modifying any of it's properties. 
+
+**23. What is the happiest thing you find during your research?**
+
+When I understand something new, especially if I am the first who described and understood the phenomena. Also I find it very important to promote science for young people, so I did and will do several activities for young people to "plant the seeds of science".
+
+**24. What is the most important fundamental question in basic biology?**
+
+Basic biology is very diverse field, it is difficult to answer. I think one of the biggest question is how cells can change their fate. It includes development, reprogramming, division axis change, differentiation and even cancer. 
+
+**25. How to exploit computational tools in bioinformatics?**
+
+Recent trend in biology generates TB and PB scale data with sequencing technologies. We can benefit from several machine learning and statistical improvement from recent years. For example if you think about the genome, as a language, which has start and stop points for genes, specific motif, overrepresented areas, etc., we can apply several language processing apploications for better predictions. Also numerical data, like expression count can use several novel correlation methods since its non-linear and variable trending properties. 
+
+**26. Did you plant your plants for experiments? How many of them you need to make your result statistically significant?**
+
+We propagate our plants vegetatively in aseptic cultures. We plan to sequence hundreds of organs to be able to establish a propere inference from it.
+
+**27. Why and when did you begin to be interested in carnivorous plants? How many kinds of carnivorous plants grow in Hungary?**
+
+I was in elementary school when I got my first sundew. No need to say, it did not live long. My research interest for them woke up when i started my bachelor degree in biology and it is just growing since then. 
+In Hungary we can find at least 7 native carnivorous plant species. 
+
+**28. What is the relationship between human and botanics?**
+
+It is difficult to understand this questions. But definitely human has a feeling for plants. When you go out and see the greens, the yellows, the flowers and leaves, people feel better. Also their are the primary energy source on Earth, they can transform the energy from sunlight to chemical energy, namely sugars. Also there are countless applications of plants, like clothes, building and furniture materials, medicines, decorations and so on. 
+
+**29. What is the result of not giving insects to carnivorous plants?**
+
+They can normally grow without extra feeding, they will keep carnivorous structures and behaviours. Feeding can increase their fitness (leaf size, seed size, seed amount, etc.).
+
+**30. We only hace 3 or 5 years to do PhD. Is it ok if we choose research topic which is integrating from different fields?**
+
+It is really beneficial for you and for your future. You can approach a problem from different point of views and apply techniques which was not available in certain fields. Eventually every new science fields comes from an interdisciplinary initiation. 
+
+**31. Does the flat leaf has more photosynthetic power?**
+
+Even if we do not see the actual capacity for photosynthesis, the flat structure allows to harvest light at near 90° while in a complex 3D pitcher it is a much lower angle which decreases the energy available from the same amount of light. 
+
+**32. What is the most difficult step in your research process?**
+
+There are several difficult steps. Mainly the most influential is to design the experiments and properly sample the plants. These will generate the data I have to deal with later and I cannot change from that point, so it is very critical to do it properly.
+
+**33. What decides a cell to be a particular cell?**
+
+If you follow the book analogy, then the genome is the dictionary, which contains the words (= genes) and the description, how to use them (= regulatory elements). If you want to constract a working process, a sentence, you need to put the proper words in proper order. If you put several of these in a context, finally you get a book. How a cell decides what words or sentences to put? It is done by external (environment, tissue, neighbouring cells, chemicals, pH, hormones, etc.) and internal (differentiation stage, potency, internal chemical environment, availabel "factors", etc.). 
+
+**34. Do all carnivorous plants have similar structures?**
+
+No, there are several types of traps, some of them can move really fastly and generates electrical stimuli similar to a neuron. Biggest part of them has sticky leaves, some has pitchers in different representations, some hose underwater vacuum traps. 
+
+**35. Do you like gardening?**
+
+Yes, I like. I had several exotic plants ant trees when I lived in Hungary. Also I volunteered in a botanical garden to help maintain their collections and also to lead tours for groups. 
+
+**36. Can you explain "stochastic determination"?**
+
+Stochastic determination means we can infer the probability to grow pitcher leaves in a particular condition, but it is never deterministic (100% sure). Let's say, it is 80% pitchers and 20% flat leaves, then we cannot expect the order, but the overall distribution of the leaf types. 
+
+**37. Do you belive there is a "Designer" (e.g. God) or everything can be explained by science/biology?**
+
+I do not belive in any supreme being, like god, but I do respect if anyone has a belief. However I also want to clarify it is important to separate "I understand" and "I belive". In science we do not belive, we know things, understand, proved and so on. Science and belief can co-exist until you do not try to mix up these terms. 
+
+**38. I wonder how to make models for computer based simulations on creatures.**
+
+There are several models for biological systems, especially in ecological and neurological context. Deep neural network is modelled based on how neurons work in our brain. To simulate a whole organism, you have to implement all the known adn unknown factors which can affect the outcome, so it is pretty difficult. For more simple models, we can quantify the imputs we manipulating and the outputs (even in expression count or phenotypyc changes) and set up a model for the system. This is really common nowdays. 
+
+**39. How to get data? Using a lot of carnivorous plants?**
+
+As for phenotypic data, we need to use a lot of plants. Like we can measure the dimensions of every leaf. For genomic data, we have to isolate RNA from the cells and using specific technologies, sequence them. After that, we can quantify the representation of each genes in that experimental context. Now you have a count data for 20-30 thousend of genes, and you just used one plant. We sequence in very big amount to get response from several conditions, then try to correlate the environmental changes, the phenotypic changes and the genetic changes. 
+
+**40. Could you briefly introduce how to quantify biology?**
+
+There is a description in the previous question. The idea is to measure more direct actions, like gene expression changes next to phenotypic (outlook) changes. Overall those expressions regulates the outlook. It is also important to measure everything instead of a simple description. If you want to say the leaves in one condition are bigger then in the other, measure the leaves and set up a model to the leaf size based on the condition. Now we are able to do this in big scale with high throughput sequencing and in a more "precise" reaction, on gene expression. 
+

@@ -1,0 +1,411 @@
+---
+title: How to give title to your top journal science article
+author: Gergo Palfalvi
+date: '2017-08-08'
+slug: how-to-give-title-to-your-top-journal-science-article
+tags:
+  - R
+  - rvest
+  - wordcloud
+  - web-scraping
+  - tidytext
+  - nature
+  - science
+summary: I was interested in web scraping and text/sentinel analysis with R and thought
+  for a practice I can check what are the most commonly used words and phrases in
+  a scientific top journal, like Nature or Science. It can help you to learn several
+  R packages and techniques and also help to find out what are the most popular terms
+  you can use for a research paper's title if you want to publish with the top.
+draft: no
+---
+
+<script src="/rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
+<script src="/rmarkdown-libs/blazy/blazy.min.js"></script>
+<script src="/rmarkdown-libs/pymjs/pym.v1.js"></script>
+<script src="/rmarkdown-libs/widgetframe-binding/widgetframe.js"></script>
+
+
+<p>I was interested in web scraping and text/sentinel analysis with R and thought for a practice I can check what are the most commonly used words and phrases in a scientific top journal, like <a href="https://www.nature.com/">Nature</a> or <a href="http://www.sciencemag.org/">Science</a>. Since these are general science journals, I would not expect any scientific field can take the lead, but let’s see.</p>
+<p>First we need to access their page and see how their archive is built. If we can get some information where and how they store the issues and article titles, we can start with the <code>rvest</code> package. Let’s see the case of <em>Nature</em>.</p>
+<p>{{% alert note %}} If you don’t know how to access HTML/CSS tags and attributes, let’s check <a href="">here</a>. The first step is a right-click/ctrl-click on the page, the “Inspect”. {{% /alert %}}</p>
+<p>Here I made a function to access any Volume - Issue pair on the page <a href="http://www.nature.com/nature/journal/vXXX/nYYYY/index.html" class="uri">http://www.nature.com/nature/journal/vXXX/nYYYY/index.html</a> where XXX is the volume (<code>v</code>) and YYYY is the issue (<code>n</code>). Luckily they store these in a consistent way, so we can easily get the titles from the <code>#research</code> tag’s <code>hgroup</code> html attributes. Firs let’s access the website with <code>read_html()</code>, then we can extract tags with <code>html_nodes()</code>. To transform this to a character vector, we use <code>html_text()</code> and save all these in a <a href="httm://tidyverse.com">tibble</a>. The last issue is v = 543 n = 7645, we can test with these.</p>
+<pre class="r"><code>library(tidyverse)
+library(rvest)
+
+nature_articles &lt;- function(v, n) {
+  read_html(paste(&quot;http://www.nature.com/nature/journal/v&quot;, v, &quot;/n&quot;, n, &quot;/index.html&quot;, sep=&quot;&quot;)) %&gt;% 
+    html_nodes(&quot;#research&quot;) %&gt;% 
+    html_nodes(&quot;hgroup&quot;) %&gt;% 
+    html_text() %&gt;% 
+    as_tibble %&gt;%
+    return()
+}
+
+nature_articles(v = 543, n = 7645) </code></pre>
+<pre><code>## # A tibble: 28 x 1
+##                                                                      value
+##                                                                      &lt;chr&gt;
+##  1                         Astrophysics: Distant galaxies lack dark matter
+##  2                       Biomedicine: An improved gel for detached retinas
+##  3                    Physiology: Bone-derived hormone suppresses appetite
+##  4                                                      50 &amp; 100 Years Ago
+##  5       Biogeochemistry: A plan for efficient use of nitrogen fertilizers
+##  6                                          Ecology: Coral crisis captured
+##  7                                          Cell biology: Sort and destroy
+##  8                              Applied physics: 3D imaging for microchips
+##  9           Molecular biology: A hidden competitive advantage of disorder
+## 10 Mineral supply for sustainable development requires resource governance
+## # ... with 18 more rows</code></pre>
+<p>{{% alert note %}} This selectors are only valid for issues since 2010. Before that you have to use different selector, but only until 1998. Before that It is also different and because the old static style of those sites, it is impossible (or at least very difficult) to fish out only the titles. If you want to play with the titles in 1998-2017 March, I uploaded a file <a href="https://palfalvi.org/static/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/nature_articles_1998_2017.csv">here</a> with the data. {{% /alert %}}</p>
+<p>That’s great, we can get one issue’s titles, but we need years of articles, which means hundreds -if not thousands- of issues. First of all we need the correct volume-issue numbers and hopefully the corresponding publishing dates also. Nature in this case also provide a nice solutions, an archive website, <a href="http://www.nature.com/nature/archive/" class="uri">http://www.nature.com/nature/archive/</a> where we can collect the necessary information. First of all let’s say we want to check the titles from 2015 and 2016. In this case our website URL modifies to <a href="http://www.nature.com/nature/archive/?years=2016-2015" class="uri">http://www.nature.com/nature/archive/?years=2016-2015</a>. I hope you get the pattern, because we will dynamically change this part depending what years we need. Other parts are very similar to the previous.</p>
+<pre class="r"><code>years = c(2012:2016)
+
+read_html(paste(&quot;http://www.nature.com/nature/archive/?year=&quot;, paste(years, collapse=&quot;-&quot;), sep=&quot;&quot;)) %&gt;%
+  html_nodes(&quot;dd&quot;) %&gt;%
+  html_text() -&gt; issues
+
+head(issues, 12)</code></pre>
+<pre><code>##  [1] &quot;22 December 2016&quot; &quot;540&quot;              &quot;7634&quot;            
+##  [4] &quot;S97-S113&quot;         &quot;22 December 2016&quot; &quot;540&quot;             
+##  [7] &quot;7634&quot;             &quot;486-614&quot;          &quot;15 December 2016&quot;
+## [10] &quot;540&quot;              &quot;7633&quot;             &quot;318-476&quot;</code></pre>
+<p>Great! Almost. OK, there are 2 problems: 2 unnecessary information is joint at the and (ISSN and EISSN numbers), we should remove them.</p>
+<pre class="r"><code>issues &lt;- issues[seq_len(length(issues)-2)]</code></pre>
+<p>The other one is the fact it is a character vector, not a data frame. If you look closely, very closely, you will figure out the 1st element is a date, then the issue, volume, finally the page numbers. This last one we do not need, so we will just discard, but the others still in a nice order we can use to arrange them into a tibble. Also there are some supplementary pages (SX-SY), those are generally replicated lines without the page numbers, so we will just extract the <code>unique()</code> lines. Then we need to filter special issues, which happened just a few times, but always got the S1 issue label.</p>
+<pre class="r"><code>n_issues &lt;- tibble(
+  date = parse_date(issues[c(T,F,F,F)], format = &quot;%d %B %Y&quot;),
+  v = parse_number(issues[c(F,T,F,F)]),
+  n = parse_number(issues[c(F,F,T,F)])
+) %&gt;% 
+  unique() %&gt;%
+  filter(n != 1)
+
+n_issues</code></pre>
+<pre><code>## # A tibble: 256 x 3
+##          date     v     n
+##        &lt;date&gt; &lt;dbl&gt; &lt;dbl&gt;
+##  1 2016-12-22   540  7634
+##  2 2016-12-15   540  7633
+##  3 2016-12-08   540  7632
+##  4 2016-12-01   540  7631
+##  5 2016-11-24   539  7630
+##  6 2016-11-17   539  7629
+##  7 2016-11-10   539  7628
+##  8 2016-11-03   539  7627
+##  9 2016-10-27   538  7626
+## 10 2016-10-20   538  7625
+## # ... with 246 more rows</code></pre>
+<p>Now we have a data frame with one issue per line. To extract all the titles we will preserve this format and will use the magical list columns in tibble. To create the new column just use casually the <code>mutate()</code> function from the <code>dplyr</code> pkg. To perform our <code>nature_articles()</code> function on every line, we will use the <code>map2()</code> function from the <code>purrr</code> package, since we have two inputs to this function.</p>
+<pre class="r"><code>n_issues %&gt;% 
+  mutate(
+    titles = map2(
+      v, 
+      n, 
+      nature_articles
+      )
+    ) -&gt; all_title</code></pre>
+<pre class="r"><code>all_title %&gt;%
+  filter(lubridate::year(date) &gt; 2011)</code></pre>
+<pre><code>## # A tibble: 6,498 x 4
+##          date     v     n
+##        &lt;date&gt; &lt;dbl&gt; &lt;dbl&gt;
+##  1 2012-12-20   492  7429
+##  2 2012-12-20   492  7429
+##  3 2012-12-20   492  7429
+##  4 2012-12-20   492  7429
+##  5 2012-12-20   492  7429
+##  6 2012-12-20   492  7429
+##  7 2012-12-20   492  7429
+##  8 2012-12-20   492  7429
+##  9 2012-12-20   492  7429
+## 10 2012-12-20   492  7429
+## # ... with 6,488 more rows, and 1 more variables: value &lt;chr&gt;</code></pre>
+<p>{{% alert warning %}} This can take a long time and even can reset with <code>HTML error 503</code> if you want to collect a lot of data at once. Simply the website recognize your action as a bot or just cannot handle this many request. You can get a better chance if you put <code>Sys.sleep()</code> with some random values in the function or randomly change the user agent with <code>curl::curl()</code>. Check <a href="http://stackoverflow.com/questions/38119447/using-r-for-webscraping-http-error-503-despite-using-long-pauses-in-program">this</a> and similar issues for more info. {{% /alert %}}</p>
+<p>Now we have the necessary data, so let’s work on it. First we have to <code>unnest()</code> our data frame to have one title per line (or work with an already unnested data). Then tear them down to words and delete all the punctuation and case issues. For this the <code>tidytext</code> package’s <code>unnest_token()</code> function comes really handy.</p>
+<p>Oh. And let me work from here with the data from <em>1998-2017</em>.</p>
+<pre class="r"><code>library(tidytext)
+
+all_title %&gt;%
+  unnest_tokens(word, value) -&gt; all_words</code></pre>
+<p>Now we can count the words and see the most frequent ones are …</p>
+<pre class="r"><code>all_words %&gt;% 
+  count(word, sort = TRUE) </code></pre>
+<pre><code>## # A tibble: 28,943 x 2
+##     word    nn
+##    &lt;chr&gt; &lt;int&gt;
+##  1    of 13961
+##  2   the 12917
+##  3    in 10037
+##  4     a  7252
+##  5   and  6685
+##  6    to  4629
+##  7   for  4257
+##  8    by  2676
+##  9    on  2329
+## 10  from  1825
+## # ... with 28,933 more rows</code></pre>
+<p>… not those we want. “of”, “the”, “in” and so on. These are called “stop words”. To remove them we can use the <code>tidytext:stop_words</code> data and <code>dplyr::anti_join()</code>.</p>
+<pre class="r"><code>all_words %&gt;% 
+  anti_join(stop_words, by = &quot;word&quot;) %&gt;% 
+  count(word, sort = TRUE) </code></pre>
+<pre><code>## # A tibble: 28,358 x 2
+##         word    nn
+##        &lt;chr&gt; &lt;int&gt;
+##  1   science  1735
+##  2      cell  1424
+##  3   biology  1192
+##  4     cells   985
+##  5     human   953
+##  6  research   878
+##  7   protein   804
+##  8       ago   758
+##  9 structure   739
+## 10       dna   726
+## # ... with 28,348 more rows</code></pre>
+<p>Now we are getting very close what we need (or now we think we need). Here already in the first two lines you can see the problem. “cell” and “cells” are independent entries. If we want to remove every modifications from a word, that is called “stemming”, since we will get the “stem” of the word. In the “cell”, “cells” case of course “cell”. There are several methods and packages, like <code>SnowballC</code>, <code>hunspell</code> or <code>tm</code>. Here I am using <code>SnowballC::wordStem()</code>.</p>
+<pre class="r"><code>library(SnowballC)
+
+all_words %&gt;% 
+  anti_join(stop_words, by = &quot;word&quot;) %&gt;% 
+  mutate(word = word %&gt;% SnowballC::wordStem()) %&gt;%
+  count(word, sort = TRUE) -&gt; word_count
+
+word_count</code></pre>
+<pre><code>## # A tibble: 20,363 x 2
+##        word    nn
+##       &lt;chr&gt; &lt;int&gt;
+##  1     cell  2409
+##  2   scienc  1794
+##  3 structur  1285
+##  4  biologi  1192
+##  5 research  1065
+##  6    human  1064
+##  7  protein  1029
+##  8    genom   952
+##  9     gene   850
+## 10    activ   822
+## # ... with 20,353 more rows</code></pre>
+<p>You may ask why there are such strange words as “structur” and “biologi” instead of “structure” and “biology”. This is the result of <a href="https://en.wikipedia.org/wiki/Word_stem">stemming</a>. “structure”, “structural”, “unstructured” and so on has the common stem “structur”.</p>
+<p>For a fancy graph, let’s use the <code>wordcloud2</code> package.</p>
+<pre class="r"><code>library(wordcloud2)
+
+word_count %&gt;%
+  wordcloud2(backgroundColor = &quot;black&quot;, color = &#39;random-light&#39;, shape = &#39;circle&#39;, gridSize = 6) </code></pre>
+<div id="htmlwidget-1" style="width:100%;height:350px;" class="widgetframe html-widget"></div>
+<script type="application/json" data-for="htmlwidget-1">{"x":{"url":"/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html//widgets/widget_unnamed-chunk-12.html","options":{"xdomain":"*","allowfullscreen":false,"lazyload":false}},"evals":[],"jsHooks":[]}</script>
+<p></br></p>
+<p>And in a little more usual form:</p>
+<pre class="r"><code>word_count %&gt;%
+  arrange(nn %&gt;% desc()) %&gt;%
+  head(10) %&gt;%
+  ggplot(aes(x = reorder(word, -nn), y = nn)) +
+  geom_bar(stat = &quot;identity&quot;)</code></pre>
+<p><img src="/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html/unnamed-chunk-13-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>It is already really interesting. We can see, in the past 19 years the word “cell” was the most popular, exactly 2409 times popped up in Nature article titles. “Structure”, “cancer”, “biology”, “gene”, “genome”, “protein” and so are mainly life science related terms. It looks like Nature is a bit biology-biased or just biologists produce much higher amount of data and publications.</p>
+<p>The world “cell” can be in many context, let’s find out in which context they appear the most (I bet stem cell and single cell RNA-seq are the most abundant, let’s take your bet, too). We can apply <code>unnest_tokens()</code> with <code>token = &quot;ngrams&quot;, n = 2</code> arguments to pick up 2-word phrases (2-grams) and in similar way as before we can count them.</p>
+<pre class="r"><code>all_title %&gt;%
+  unnest_tokens(word, value, token=&quot;ngrams&quot;, n = 2) %&gt;% 
+  filter( stringr::str_detect(string = .$word, pattern = &quot;[C|c]ell[s]*&quot;) == TRUE)  %&gt;% 
+  count(word, sort = TRUE) </code></pre>
+<div id="htmlwidget-2" style="width:95%;height:350px;" class="widgetframe html-widget"></div>
+<script type="application/json" data-for="htmlwidget-2">{"x":{"url":"/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html//widgets/widget_unnamed-chunk-15.html","options":{"xdomain":"*","allowfullscreen":false,"lazyload":false}},"evals":[],"jsHooks":[]}</script>
+<p>Indeed “stem cell(s)” was the most abundant, but “cell rna” was less usual (only 6 times), even then solar cells (12 times), probably because these terms just became popular and single cell sequencing is available from the last few years only. “single cell” was occuring 24 times (as “single cell activity”, “single cell division” and so on next to “single cell rna-seq”). Let’s have a look on the articles with “single cell” in the title.</p>
+<pre class="r"><code>all_title %&gt;%
+  filter( stringr::str_detect(.$value, 
+                              pattern = &quot;[S|s]ingle([:graph:]|[:space:]){0,1}[C|c]ell&quot;)) %&gt;%
+  select(date, value) </code></pre>
+<pre><code>## # A tibble: 30 x 2
+##          date
+##        &lt;date&gt;
+##  1 2003-08-07
+##  2 2005-07-21
+##  3 2006-06-15
+##  4 2007-06-28
+##  5 2007-04-26
+##  6 2009-02-12
+##  7 2012-11-08
+##  8 2012-07-05
+##  9 2013-10-03
+## 10 2013-08-29
+## # ... with 20 more rows, and 1 more variables: value &lt;chr&gt;</code></pre>
+<p>Interestingly the first article with “single cell” in the title just appeared in 2003 and after that only once in 2005, and once in 2006. Only from 2012 it became as popular to have some article in every year with the title containing this term.</p>
+<p>Also let’s have a look on every 2-grams. Here I also separate the 2 words first to remove every stop word containing lines and stem them. Also “science” appears so many times due to article type headers, like “Material Science”, “Earth Science”, “Climate Science” and so. Because of this reason I filter lines, which contains “science”. For similar reason let’s delete lines with “review”, “highlight”, “research”, “biology”, “physics”, “journal club”, “…et al.: reply”, and “50”, “100”. These numbers from the series “50 and 100 years ago”</p>
+<pre class="r"><code>all_title %&gt;%
+  unnest_tokens(word, value, token=&quot;ngrams&quot;, n = 2) %&gt;% 
+  separate(word, into = c(&quot;word1&quot;, &quot;word2&quot;)) %&gt;% 
+  anti_join(stop_words, by = c(&quot;word1&quot; = &quot;word&quot;)) %&gt;%
+  anti_join(stop_words, by = c(&quot;word2&quot; = &quot;word&quot;)) %&gt;%
+  filter(!word1 %in% c(&quot;science&quot;, &quot;review&quot;, &quot;highlight&quot;, &quot;research&quot;, &quot;biology&quot;, &quot;physics&quot;, &quot;journal&quot;, &quot;club&quot;, &quot;communication&quot;, &quot;al&quot;, &quot;50&quot;),
+         !word2 %in% c(&quot;science&quot;, &quot;review&quot;, &quot;highlight&quot;, &quot;research&quot;, &quot;biology&quot;, &quot;physics&quot;, &quot;journal&quot;, &quot;club&quot;, &quot;reply&quot;, &quot;100&quot;)) %&gt;%
+  mutate(
+    word1 = word1 %&gt;% wordStem(),
+    word2 = word2 %&gt;% wordStem()) %&gt;% 
+  unite(word, word1, word2, sep = &quot; &quot;) %&gt;%
+  count(word, sort = TRUE) -&gt; ngrams_2
+
+ngrams_2 %&gt;% 
+  head(20)%&gt;%
+  ggplot(aes(x = reorder(word, -nn), y = nn)) +
+  geom_bar(stat = &quot;identity&quot;) +
+  theme(axis.text.x = element_text(angle = 270, hjust = 0, vjust = 0.5))</code></pre>
+<p><img src="/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html/unnamed-chunk-17-1.png" width="672" style="display: block; margin: auto;" /></p>
+<div id="htmlwidget-3" style="width:100%;height:350px;" class="widgetframe html-widget"></div>
+<script type="application/json" data-for="htmlwidget-3">{"x":{"url":"/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html//widgets/widget_unnamed-chunk-18.html","options":{"xdomain":"*","allowfullscreen":false,"lazyload":false}},"evals":[],"jsHooks":[]}</script>
+<p>From this, it is very clear <em>Nature</em>’s main focus is on stem cells. The second place is climate change, but still ~2.75x less occurrence then the winner. “Crystal structure” and “structural basis” are mainly protein or polymer structures, which is a very popular field. If you are working in <strong>material science</strong>, better to go with these, or at least with carbon nanotubes</p>
+<p>Condensed-matter physics is yet another article type, looks like we couldn’t clean all of them.</p>
+<p>Gene expression, genome sequence/ing and cell cycle, DNA damage and transcription factor are the most popular molecular biology terms (of course after stem cell). If you want to publish a <em>Nature</em> paper, looks like these fields are the hot topics in <strong>life sciences</strong>.</p>
+<p>If you are working in <strong>physics</strong>, probably black holes and magnetic fields are the best choices.</p>
+<p>And the most popular biological model organism on full name: <strong>Caenorhabditis elegans</strong> with 68 occurrence in <em>Nature</em> article titles within 19 years. However <strong>Drosophila</strong> appeared 256 times. For a detailed look on the popularity of different model organisms, look at this table (human excluded, because it would take over everything):</p>
+<div id="htmlwidget-4" style="width:100%;height:350px;" class="widgetframe html-widget"></div>
+<script type="application/json" data-for="htmlwidget-4">{"x":{"url":"/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html//widgets/widget_unnamed-chunk-19.html","options":{"xdomain":"*","allowfullscreen":false,"lazyload":false}},"evals":[],"jsHooks":[]}</script>
+<div id="changing-paradigms" class="section level2">
+<h2>Changing paradigms</h2>
+<p>So far so nice, I am already very glad with these results, but there are one more aspect I am interested. Research trends are changing in time, for example 19 years ago there was no genome sequencing, which take the place of genetic mapping.</p>
+<pre class="r"><code>bad_words &lt;- c(&quot;scienc&quot;, &quot;science&quot;, &quot;review&quot;, &quot;highlight&quot;, &quot;research&quot;, &quot;biology&quot;, &quot;physics&quot;, &quot;journal&quot;, &quot;club&quot;, &quot;communication&quot;, &quot;al&quot;, &quot;reply&quot;, &quot;50&quot;, &quot;100&quot;, &quot;new&quot;)
+
+all_words %&gt;% 
+  mutate(year = lubridate::year(date)) %&gt;%
+  anti_join(stop_words, by = &quot;word&quot;) %&gt;% 
+  filter(!word %in% bad_words,
+         year != 2017) %&gt;% 
+  mutate(word = word %&gt;% SnowballC::wordStem()) %&gt;%
+  group_by(year) %&gt;%
+  count(word, sort = TRUE) -&gt; word_count_year
+
+word_count_year </code></pre>
+<pre><code>## Source: local data frame [76,318 x 3]
+## Groups: year [19]
+## 
+## # A tibble: 76,318 x 3
+##     year  word    nn
+##    &lt;dbl&gt; &lt;chr&gt; &lt;int&gt;
+##  1  2009  cell   196
+##  2  2008  cell   186
+##  3  2006  cell   174
+##  4  2005  cell   150
+##  5  2013  cell   144
+##  6  2014  cell   140
+##  7  2007  cell   138
+##  8  2015  cell   138
+##  9  2004  cell   134
+## 10  2001  cell   130
+## # ... with 76,308 more rows</code></pre>
+<p>First of all let’s see the number of words in every year.</p>
+<pre class="r"><code>word_count_year %&gt;%
+  filter(year != 2017) %&gt;%
+  group_by(year) %&gt;%
+  summarize(sum = sum(nn)) %&gt;%
+  ggplot() +
+  geom_line(aes(x = year, 
+                y = sum),
+            size =2) </code></pre>
+<p><img src="/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html/unnamed-chunk-21-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>Look’s like in 2010 there was less publications or extra short titles. We can find out, if we just see the number of publications by year.</p>
+<pre class="r"><code>all_title %&gt;%
+  mutate(year = lubridate::year(date)) %&gt;%
+  filter(year != 2017) %&gt;%
+  group_by(year) %&gt;%
+  summarize(sum = value %&gt;% 
+              length() %&gt;% 
+              sum()) %&gt;%
+  ggplot() +
+  geom_line(aes(x = year,
+                y = sum),
+            size = 2) +
+  labs(title = &quot;Number of Publications in Nature&quot;,
+       x = &quot;Year&quot;,
+       y = &quot;Number of publications&quot;) </code></pre>
+<p><img src="/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html/unnamed-chunk-22-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>Looks like the publication number is radically dropped in 2010. I am not sure about the exact cause, but interestingly Nature Communications came out in that year in the first time also. Probably Nature decided to distribute the publications in several subjournals and keep just the top few in Nature itself.</p>
+<pre class="r"><code>full_join(
+all_title %&gt;%
+  mutate(year = lubridate::year(date)) %&gt;%
+  filter(year != 2017) %&gt;%
+  group_by(year) %&gt;%
+  summarize(publication_sum = value %&gt;% 
+              length() %&gt;% 
+              sum()) ,
+word_count_year %&gt;%
+  filter(year != 2017) %&gt;%
+  group_by(year) %&gt;%
+  summarize(word_sum = sum(nn)),
+by = &quot;year&quot;
+) %&gt;%
+  mutate(av_title_length = word_sum/publication_sum) %&gt;%
+  ggplot() +
+  geom_line(aes(x = year,
+                y = av_title_length),
+            size = 1,
+            color = &quot;dodgerblue&quot;) +
+  geom_point(aes(x = year,
+                 y = av_title_length), 
+             color = &quot;dodgerblue&quot;,
+             size = 2) +
+  geom_line(aes(x = year, y = word_sum/max(word_sum)* max(av_title_length)), color = &quot;red&quot;, alpha = 0.3) +
+  geom_line(aes(x = year, y = publication_sum/max(publication_sum)* max(av_title_length)), color = &quot;green&quot;, alpha = 0.3) +
+  labs(title = &quot;Avarage Title Length in Nature&quot;,
+       x = &quot;Year&quot;,
+       y = &quot;Words in Title&quot;,
+       caption = c(&quot;Red line: average word number in titles (relative)\nGreen line: Publication number in issues (relative)&quot;))</code></pre>
+<p><img src="/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html/unnamed-chunk-23-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>Fewer article number probably allowed slightly longer, better explanatory titles to articles. Other possibility is the increasing complexity of articles where finding an appropriate and short title is almost impossible.</p>
+</div>
+<div id="detailed-search-on-specific-terms" class="section level2">
+<h2>Detailed search on specific terms</h2>
+<p>There is a lot more we could do in general, but then I would never finish this post. If you have any idea please comment below. If you put some R code, or result on your work and founding, that is the best.</p>
+<p>Now let’s have a look in some specific terms. Here I will focus mainly on terms which are relevant to my field, molecular biology, genomics and evolution. Also I will look for some global events’ influence, like some disease outbreak. I put the R code for every post, but will not explain them, since they are repetitive and relatively easy to understand. If you have different interest, then me, please show your results and findings and let’s compare what happened in the scientific life in the point of view of <em>Nature</em>.</p>
+</div>
+<div id="publication-influence-from-main-disease-outbreaks" class="section level2">
+<h2>Publication influence from main disease outbreaks</h2>
+<p>Let’s have a look on major disease outbreaks from the past decades, like several flu types, Ebola and SARS.</p>
+<pre class="r"><code>word_count_year %&gt;%
+  filter(word %in% c(&quot;h1n1&quot;, &quot;h5n1&quot;, &quot;h7n9&quot;, &quot;ebola&quot;, &quot;sar&quot;)) %&gt;%
+  full_join(word_count_year %&gt;% 
+           filter(year != 2017) %&gt;%
+           group_by(year) %&gt;%
+           summarize(word_sum = sum(nn)),
+           by = &quot;year&quot;) %&gt;%
+  filter(!is.na(nn)) %&gt;%
+  ggplot() +
+  geom_line(aes(x = year, 
+                y = nn/word_sum,
+                color = word),
+            alpha = 0.6,
+            size =1.5) +
+  geom_point(aes(x = year, 
+                y = nn/word_sum,
+                color = word),
+            alpha = 0.9,
+            size =2) +
+  labs(x = &quot;Year&quot;,
+       y = &quot;Relative abudance (%)&quot;,
+       title = &quot;Disease outbreaks&quot;) +
+  scale_x_continuous(breaks = 1998:2016, limits = c(1998,2016)) +
+  theme(panel.grid.major.x = element_line(color = &quot;grey80&quot;),
+        axis.text.x = element_text(angle = 60, vjust = 0.5))</code></pre>
+<p><img src="/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html/unnamed-chunk-24-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p><a href="https://en.wikipedia.org/wiki/Severe_acute_respiratory_syndrome">SARS</a> was the first big outbreak from this plot, which started in 2002 November in South China and presented for almost 2 years with around 8000 cases. In 2003 there was a peak in publications, then in 2004 it was reported much less time and did not appeared again until 2013.</p>
+<p><a href="https://en.wikipedia.org/wiki/Ebola_virus_disease">Ebola</a> has a more constant base. It can be found in some African countries since 1995, but usually just a few hundred cases in a year. In 2013 there was a bigger outbreak in West Africa which was followed by a spread outside of Africa in 2014. Publication rate can give back this trend, with the peak in 2015, when scientists could react to the epidemic.</p>
+<p><a href="https://en.wikipedia.org/wiki/Influenza">Influenza</a> had several outbreaks with several strains. First H5N1 strain, which caused bird flu was discovered in 2004 and had publications in following years, 2005, 2006 and 2008. Swine flu (strain H1N1) was reported in 2009, and Nature had publication in the same year. FYI this is the same strain which caused Spanish flu in 1918. H7N9 strain of bird flu came in 2013, again the same year scientists reacted in Nature. There was recent outbreaks in 2016 October in China, so it is possible we can see similar trends in the future.</p>
+<p>As conclusion we can say that scientists and Nature reacted to these outbreaks and recently with less time delay, which give some hope for faster and more effective vaccination and/or treatment development.</p>
+</div>
+<div id="appearance-of-genomics" class="section level2">
+<h2>Appearance of genomics</h2>
+<p>Now let’s see a little more abstract scientific world and search for terms and techniques relevant to genomic research.</p>
+<p><img src="/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html/unnamed-chunk-25-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>DNA and genome has similar patterns, however genome has 2 bigger peaks. One was possible the first genomes, human genome project and so. Later the popularity of new generation sequencing techniques allowed to sequence in way lower price then before, and the “genomic era” was started in mid-late 2000’. RNA is probably the newest and most popular big target to genetic/genomic research now. Histone and epigenetic related titles accumulating much slower, probably the real breakthrough is still waiting.</p>
+<p><img src="/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html/unnamed-chunk-26-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>In early 2000’ proteomic research was on top due to MS/MS possibilities, but unfortunately there is no new or highly advanced technique, although there was several improvement. Transcriptomic research started slowly, and noways it cannot stand alone as a Nature paper. Epigenomic had a few peaks, but started relatively late, only appeared in 2007. Still 2 years earlier, then the first interactome paper. Interactome requires much higher amount of data and labor work, so the popularity is lower or similar then any other “omics” topic.</p>
+<p><img src="/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html/unnamed-chunk-27-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>As we can expect, a single PCR or Sanger sequencing is not enough anymore to publish in Nature. Microarray is not represented, but “seq” can be found in rapidly increasing popularity, as in RNA-seq, ChIP-seq and so. Exom sequencing is also a great technique, but limitations of available organisms are stopped the wide spreading (mainly used for humans).</p>
+<p>We can see the discovery and “incubation” of CRISPR, until researchers described the possible usage in genome editing. CRISPR/Cas9 is the first and most popular in use, but Cpf1 is also joined the race in 2016. Other genome editing methods are way underrepresented, as for TALEN system, there is only one data point in 2012.</p>
+</div>
+<div id="search-for-others" class="section level2">
+<h2>Search for others</h2>
+<p><img src="/post/2017-08-08-how-to-give-title-to-your-top-journal-science-article_files/figure-html/unnamed-chunk-28-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>I am not familiar with the really hot topics in physics, just wanted to show You can search for anything which is interesting for You. Probably You can explain more about the events in Your field, then me. For example why the terms “Higgs” and “boson” disappeared in 2009? Why “exoplanet” appeared in the same year? What kind of exoplanet topic made the 2010 peak? What happened in quantum physics around 2011 and 2016?</p>
+<div id="section" class="section level3">
+<h3></h3>
+<p>If you have answers or made a small analysis on your own interest, found some other way to analyse or just have a question, please comment below. As an extra exercise, you can do similar analysis, but in different journals.</p>
+</div>
+</div>

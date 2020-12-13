@@ -1,0 +1,195 @@
+---
+title: 'Jellybean mistakes 3: Model simmetries'
+author: "Gergo Palfalvi"
+date: '2019-02-16'
+draft: no
+header:
+  caption: ''
+  image: ''
+highlight: yes
+math: yes
+slug: jellybean-mistakes-3-model-simmetries
+summary: One of the most often mistaken and forgotten problem in basic statistics,
+  when they assume that the fitted regression model is symmetric, aka. does not matter
+  if you fit x~y or y~x. Well, based purely on the method and definition of linear
+  model fitting, this is a very wrong assumption and I think one of the main cause
+  for this is that linear models are always interpreted together with correlation
+  values where this causational direction is not present. Let's see why and learn
+  how to use and interpret correctley, morover what if you need a symmetric model.
+tags:
+- bioinformatics
+- plot
+- R
+- science
+- regression
+- PCA
+categories:
+- jellybean
+- R
+- Biology
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(gganimate)
+library(ggthemr)
+ggthemr("fresh")
+```
+
+One of the most often mistaken and forgotten problem in basic statistics, when they assume that the fitted regression model is symmetric, aka. does not matter if you fit `x~y` or `y~x`. Well, based purely on the method and definition of linear model fitting, this is a very wrong assumption and I think one of the main cause for this is that linear models are always interpreted together with correlation values where this causational direction is not present.
+
+## What is a linear (regression) model?
+
+Linear regression model is a very simple thing. It all starts with the model function: $ y = \alpha + \beta x $, which is a line with $\beta$ slope and an intersection on the y axis at $\alpha$. Since most of the real world observations are not laying on a perfect line due to some error (unobserved variables, stochastic effects etc.), we extend this equation for each observation pair ${x_i, y_i}$ as $y_i = \alpha + \beta x_i + \epsilon_i$. 
+
+And here we are, we have the regression model. The goal is to find estimates for $\alpha$ and $\beta$ as $\hat{\alpha}$ and $\hat{\beta}$ based on our measured data pairs.
+
+The solution for this problem is to use the __ordinary least squares__ method. You do not need to know how to calculate this, just understand what is going on. We would like to find $\hat{\alpha}$ and $\hat{\beta}$ where the sum of the squared error terms ($\sum\hat{\epsilon_i}$) is minimal. In simpler world, we would like to find a model, where the error is minimal. Sounds reasonable and easy, but let's see a visual representation.
+
+```{r}
+tibble(s = seq(-5, 5, 0.2)) %>%
+  mutate(order = seq_along(s),
+         x = list(anscombe$x1),
+         y = list(anscombe$y1),
+         i = mean(anscombe$y1) - s*mean(anscombe$x1)) %>%
+  unnest() %>%
+  mutate(pred_y = s*x+i) %>%
+  group_by(order) %>%
+  mutate(se = sum((y-pred_y)^2)) %>%
+  ggplot() +
+  geom_smooth(aes(x, y), method = "lm", se = FALSE, color = "lightblue", alpha = 0.6) + 
+  geom_abline(aes(slope = s, intercept = i)) +
+  geom_segment(aes(x = x, y = y, xend = x, yend = pred_y, color = se)) +
+  geom_point(aes(x, y)) +
+  geom_point(aes(mean(x), mean(y)), color = "red") +
+  coord_cartesian(xlim = c(-10, 30), ylim = c(-10, 30)) +
+  labs("Ordinary least square regression as x ~ y") +
+  transition_states(
+    order,
+    transition_length = 2,
+    state_length = 1
+  ) 
+```
+
+
+You can see the actual fitted line fixed and the "searching" line with all the errors connected to the datapoints. You can also see, that those lines (residuals) are moving only in the y axis, but fixed in the x. It means we minimize the error only in the y axis direction, which makes sense, since we are predicting y based on x. The residual is the informationbit x cannot explain about y. 
+
+### But what if we turn the table?
+
+What if we want to predict x based on y? Then we just need to change the equation as $x = \alpha + \beta y$ which means we are working on minimizing the squeared residuals on the horizontal direction.
+
+Here I simply changed the x and y data and finally used a `coord_flip()` to bring it back to the original state.
+
+```{r}
+tibble(s = seq(-5, 5, 0.2)) %>%
+  mutate(order = seq_along(s),
+         x = list(anscombe$y1),
+         y = list(anscombe$x1),
+         i = mean(anscombe$x1) - s*mean(anscombe$y1)) %>%
+  unnest() %>%
+  mutate(pred_y = s*x+i) %>%
+  group_by(order) %>%
+  mutate(se = sum((y-pred_y)^2)) %>%
+  ggplot() +
+  geom_smooth(aes(x, y), method = "lm", se = FALSE, color = "lightblue", alpha = 0.6) + 
+  geom_abline(aes(slope = s, intercept = i)) +
+  geom_segment(aes(x = x, y = y, xend = x, yend = pred_y, color = se)) +
+  geom_point(aes(x, y)) +
+  geom_point(aes(mean(x), mean(y)), color = "red") +
+  coord_flip(xlim = c(-10, 30), ylim = c(-10, 30)) +
+  labs("Ordinary least square regression as y ~ x") +
+  labs(x = "y", y = "x") +
+  transition_states(
+    order,
+    transition_length = 2,
+    state_length = 1
+  ) 
+```
+
+You can easily see how many things changed:
+
+1, y became the independent variable.
+2, x became the dependent one.
+3, Regression line is different (actually mirrored).
+4, Residuals are represented as vertical lines.
+
+## Which one is correct?
+
+The correct choice for independent and dependent variable is based on your experimental setup. When you fix a condition, like temperature, soil, light, chemical concentration, that will be your predictor. Then you will measure something (~phenotype, reaction), which will be dependent on the predictor. 
+
+## A symmetric solution - orthogonal regression
+
+There are cases when one would like to have a simmetryc solution for the problem, where non of the variables are strictly dependent on the other. Just think about that when you would like to plot two genes in several conditions and predict their linear (or logarithmic) relationship. Without further information about the gene regulatory hierarchy, there is no way to place one above the other, and also we cannot fix any of the genes' expression to measure the other one. Which one you would choose as a predictor? I would choose neither and try to fit an orthogonal regression. 
+
+Orthogonal sounds very "mathematical", but actually it is the same fitted line as the first eigenvector of the system, which would be the first principal component axis in a PCA. A lot of things in a very different names, but basically they mean the same. In fact, to calculate the line, there is no easier way in R, then calculate the PCA and from the rotation and center informations calculate the slope and the intercept terms.
+
+In this case we could reach with the __total least squares__ method, where we minimize the summed squared distances in perpendicular between the data points and the fitted line (minimizing total variance). Maybe it is a bit difficult to understand, but here is the visual representation to help you:
+
+```{r}
+pca <- prcomp(~x1+y1, anscombe)
+slp <- with(pca, rotation[2,1] / rotation[1,1])
+int <- with(pca, center[2] - slp*center[1])
+
+tibble(s = seq(-5, 5, 0.2)) %>%
+  mutate(order = seq_along(s),
+         x = list(anscombe$x1),
+         y = list(anscombe$y1),
+         i = mean(anscombe$y1) - s*mean(anscombe$x1)) %>%
+  unnest() %>%
+  mutate(s2 = -1/s,
+         i2 = y-s2*x,
+         pred_x = if_else(s == 0, x, (i2-i)/(s-s2) ),
+         pred_y = s*pred_x + i) %>%
+  group_by(order) %>%
+  mutate(se = sum((pred_x-x)^2 + (pred_y-y)^2)) %>%
+  ggplot() +
+  geom_abline(slope = slp, intercept = int, color = "lightblue", alpha = 0.6) +
+  geom_abline(aes(slope = s, intercept = i, color = se)) +
+  geom_segment(aes(x = x, y = y, xend = pred_x, yend = pred_y, color = se)) +
+  geom_point(aes(x, y)) +
+  geom_point(aes(mean(x), mean(y)), color = "red") +
+  labs("Orthogonal regression for (x,y)") +
+  coord_cartesian(xlim = c(-10, 30), ylim = c(-10, 30)) +
+  transition_states(
+    order,
+    transition_length = 1,
+    state_length = 1
+  ) 
+```
+
+## Let's see all of them at once!
+
+To make a stronger convincing evidence, let's see all the 3 regression lines in one graph.
+
+```{r}
+pca <- prcomp(~x1+y1, anscombe)
+slp <- with(pca, rotation[2,1] / rotation[1,1])
+int <- with(pca, center[2] - slp*center[1])
+lmxy <- lm(y1 ~ x1, anscombe)
+lmyx <- lm(x1 ~ y1, anscombe)
+
+ggplot(anscombe) +
+  geom_point(aes(x1,y1)) + 
+  geom_abline(intercept = int, slope = slp, color = "limegreen") +
+  geom_abline(intercept = lmxy$coefficients[1], slope = lmxy$coefficients[2], color = "hotpink") +
+  geom_abline(intercept = - lmyx$coefficients[1]/lmyx$coefficients[2], slope = 1/lmyx$coefficients[2], color = "dodgerblue") +
+  xlim(c(0, 20)) + ylim(c(0, 20)) +
+  labs(title = "Linear regression types", 
+       x = "x", 
+       y = "y", 
+       caption = "Blue: y~x\nPink: x~y\nGreen: orthogonal")
+
+```
+
+## So where is correlation?
+
+Actually, there is no direct relation between the correlation and the regression. Indeed, correlation is insensitive of the directional relation of the data, it is a measure of the strengh of the relationship. But more about this in an other post.
+
+
+## Session info 
+
+To produce the graphs, I used the `tidyverse` and the `gganimate` packages and the `anscombe` dataset (only x1 nad y1). My plotting theme is set as `ggthemr::ggthemr("fresh")`
+
+```{r}
+devtools::session_info()
+```

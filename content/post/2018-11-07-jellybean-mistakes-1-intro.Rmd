@@ -1,0 +1,42 @@
+---
+title: 'Jellybean mistakes 1: Intro'
+author: Gergo Palfalvi
+date: '2018-11-07'
+slug: jellybean-mistakes-1-intro
+categories:
+  - R
+  - Biology
+tags:
+  - R
+  - bioinformatics
+  - science
+summary: Introduction to a new series about common mistakes in statistics, datavis and everything else in biology.
+draft: no
+---
+
+You are asking, what is "jellybean mistakes" and how it is connected to R, biology and statistics? I took this title following [this xkcd comic](https://xkcd.com/882/):
+
+![Significant - https://xkcd.com/882/](https://imgs.xkcd.com/comics/significant.png)
+
+As you can see, green jellybeans are bad for your skin if you believe of this testing method and the somewhat ridiculous `p < 0.05` cutoff (but more on this in a later post). 
+
+Jellybean can also refer to someone who is hard headed but has no bad intention in the inside. Some cases the mistakes came from these kind of people, as they had learnt one or another way to do something and they find it extremely difficult to change, even if it is not an appropriate way to do things.
+
+In the way to discuss and -hopefully- correct these mistakes, I will show every statistical method and plotting in __`R`__, so *you* can reproduce and even use for your own purpose.
+
+Here I would like to pinpoint a few topics I will go through in one or several posts in the future, as part of this post series:
+
+- p-value for decision making
+- p-hacking
+- sample size and selected outliers
+- box plots and error-bars
+- correlation and causation
+- line fitting and $R^2$
+- linear model symmetries
+
+If you have any interesting topic to discuss or want to hear about, please write in the comments! 
+
+See you soon in the next post!
+
+
+

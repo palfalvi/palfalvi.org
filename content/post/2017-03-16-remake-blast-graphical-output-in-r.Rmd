@@ -1,0 +1,277 @@
+---
+title: Remake BLAST graphical output in R
+author: Gergo Palfalvi
+date: '2017-03-16'
+slug: remake-blast-graphical-output-in-r
+categories:
+  - primeR
+  - R
+tags:
+  - R
+  - blast
+  - bioinformatics
+summary: As we learned how to perform a local BLAST search via R, we already obtained a data frame containing the BLAST result, but as in any data, a graphical representation worth more then a thousand of data entries for information flow. Here i show some option for the graphical representation of BLAST output recreated by ```ggplot2```, ```plotly``` and ```highcharter```. 
+draft: true
+---
+
+```{r setup, include=FALSE}
+Sys.setlocale(locale="en_US.UTF-8")
+library(tidyverse)
+library(plotly)
+library(highcharter)
+
+```
+
+As we learned how to perform a local BLAST search via R, we already obtained a data frame containing the BLAST result. However a graphical representation of any data usually yield in more general or faster understanding. NCBI's webpage already gives a small graphical result also.
+
+[IMAGE ABOUT BLAST RESULT]
+
+
+
+Now let's make this graph using ggplot2, plotly and highcharter. 
+### **If you are familiar with ggplot2, [skip]() this part**
+
+## GGPLOT2
+
+```ggplot2``` is a powerful plotting syntax in the tidyverse which relies on the *Grammar of Graphics* (aka GG). The main idea is that to theoretically slice up the plot to layers and start thinking with them when we build a graphic. Layers, like data and coordinate system are easy to understand but we need aesthetics and geometrics. 
+
+Aesthetics (```aes()```) make up the "dimensions", you declare how to use the data for the visualization. Common aesthetics are x and y, which will - obviously - declare the x and y coordinates. Also color, size, shape and transparency (alpha) can be mapped as aesthetics. e.g. color the bars based on a category or make the dotsize represent the population size. 
+
+Geometrics (```geom_*()```) are a little easier to understand. Those are the geometric (and statistical) representation of everything. You want a scatterplot? Then you need points for geometrics. Also put a fitted line on that? Use a smoothing geometric function. As you can imagine, every geometric layer is a phisical layer on the graph. Also special geoms need special aesthetics to be defined (for a scatterplot x and y are necessary, for a density plot just x, for a segment x, y, xend and yend are necessary).
+
+
+
+```{r, fig.align='center', echo = FALSE}
+iris %>% ggplot(mapping = aes(x = Sepal.Length, y = Sepal.Width, color = Species, size = pi * Petal.Length*Petal.Width)) + 
+  geom_point(alpha = 0.6) + 
+  geom_smooth(se = FALSE, method = "lm", show.legend = FALSE) + 
+  scale_size_continuous(name = "Petal area") +
+  labs(x = "Sepal Length", 
+       y = "Sepal Width", 
+       title = "EXAMPLE: Iris flower sizes", 
+       caption = "ggplot2 graph with geom_point() and geom_smooth() 
+                  aesthetics: aes(x = Sepal Length, 
+                      y = Sepal Width, 
+                      color = Species, 
+                      size = Petal area)")
+```
+
+### Finished ggplot decription
+
+#### BLAST plot with ```ggplot2```
+
+So let's see the BLAST result we created in the [last post](). As an example in this time I used the [*Arabidopsis thaliana* PIE1](http://www.arabidopsis.org/servlets/TairObject?type=locus&name=At3g12810) gene as query and performed BLAST against the [*Utricularia gibba* genome](http://www.nature.com/nature/journal/v498/n7452/full/nature12132.html), which is the smallest Angiosperm genome and a carnivorous plant. The gene and the output looks like this:
+
+```{r, include = FALSE}
+
+pie1 <- c("ATGGCGTCTAAAGGTGGTAAATCTAAACCTGATATAGTAATGGCGTCCAAGAGTGGGAAATCTAAACCTGATAATGAATCCAGAGCTAAGCGTCAGAAGACGCTCGAAGCTCCTAAAGAACCACGTCGTCCTAAAACTCACTGGGACCATGTATTGGAGGAGATGGCTTGGCTGTCAAAGGACTTTGAGTCTGAGAGGAAATGGAAGCTGGCGCAGGCGAAGAAGGTTGCTTTGAGAGCCAGCAAAGGAATGCTAGATCAGGCATCTAGGGAAGAAAGGAAGCTAAAGGAAGAAGAACAGCGACTTCGGAAAGTAGCCCTCAATATCTCGAAAGACATGAAAAAGTTTTGGATGAAAGTTGAGAAGCTGGTGCTTTACAAGCATCAGTTGGTACGCAATGAGAAGAAGAAGAAGGCTATGGACAAGCAACTTGAATTTCTGTTAGGCCAAACTGAGAGGTACTCAACCATGTTGGCAGAAAATTTAGTGGAGCCTTATAAACAGGGCCAAAATACTCCTTCAAAACCTCTACTAACTATCGAATCAAAAAGTGATGAGGAGAGGGCAGAACAGATACCTCCAGAGATAAATTCTTCTGCAGGTCTTGAATCAGGAAGTCCTGAACTCGATGAGGATTATGATCTAAAATCTGAGGATGAGACCGAAGATGATGAAGATACTATTGAGGAGGATGAAAAACACTTCACCAAACGTGAAAGACAGGAAGAGTTGGAAGCTTTGCAAAATGAAGTGGATCTACCAGTTGAGGAGCTGCTCAGACGTTATACCTCTGGAAGAGTTAGCCGAGAAACCAGCCCAGTAAAAGATGAAAATGAGGACAATCTGACCTCAGTTAGCCGAGTAACCAGCCCAGTAAAAGATGAAAATCAGGACAATCTGGCCTCAGTAGGTCAAGATCATGGAGAGGACAAGAACAATCTTGCAGCTTCTGAAGAAACTGAAGGGAACCCAAGTGTTCGTCGTTCTAATGATAGCTATGGTCATTTGGCAATATCCGAGACCCATTCACATGACCTTGAGCCAGGCATGACGACTGCATCTGTGAAGTCCAGAAAGGAAGATCATACCTATGATTTTAACGATGAACAGGAAGATGTTGACTTTGTTCTTGCCAATGGTGAGGAAAAGGATGATGAGGCGACATTGGCTGTCGAAGAGGAACTGGCGAAAGCAGATAATGAAGATCATGTCGAAGAGATTGCCCTGCTGCAAAAAGAGAGTGAAATGCCTATTGAAGTACTACTTGCAAGGTATAAGGAGGATTTCGGTGGCAAGGATATATCTGAGGATGAATCTGAATCTTCATTTGCTGTATCTGAAGACTCTATAGTAGACTCTGACGAAAATAGGCAGCAAGCTGATTTAGATGATGACAACGTTGATTTAACAGAATGTAAGCTAGATCCAGAGCCTTGCTCAGAAAATGTTGAAGGCACATTCCATGAAGTAGCAGAAGATAATGATAAAGATAGTAGTGATAAAATTGCTGATGCAGCAGCAGCAGCAAGATCTGCCCAGCCAACTGGATTTACATACTCCACAACAAAAGTTCGAACGAAACTGCCGTTTCTACTTAAGCATTCTCTGCGTGAGTACCAACACATTGGTTTGGACTGGCTTGTCACGATGTATGAGAAAAAGTTGAACGGTATTCTGGCTGATGAAATGGGTCTTGGAAAGACAATTATGACCATTGCTCTTCTAGCTCACCTTGCATGTGATAAGGGAATATGGGGTCCCCATCTGATTGTGGTTCCTACAAGTGTGATGCTTAATTGGGAGACTGAGTTTCTTAAATGGTGTCCTGCATTTAAAATTCTCACCTACTTTGGTAGTGCAAAGGAGCGGAAACTCAAGAGACAAGGATGGATGAAGCTTAACTCATTTCATGTATGCATAACAACCTATAGGCTAGTTATTCAGGACAGTAAAATGTTCAAGCGCAAGAAGTGGAAATACTTGATTCTTGACGAAGCCCATTTAATTAAGAATTGGAAGTCTCAGAGATGGCAGACACTATTGAACTTCAATTCTAAACGCAGAATTTTGTTGACTGGTACACCCCTGCAGAATGATCTTATGGAACTGTGGTCACTTATGCACTTTCTGATGCCACATGTCTTTCAGTCTCACCAGGAATTCAAAGACTGGTTCTGTAACCCAATAGCAGGGATGGTCGAGGGACAAGAAAAAATCAACAAAGAAGTTATTGATCGCTTACATAATGTCCTCCGTCCTTTCCTTCTACGGCGCCTAAAAAGGGATGTGGAGAAGCAACTTCCTTCGAAACATGAGCATGTTATTTTCTGTAGACTGTCTAAGAGGCAGCGCAACTTGTATGAGGACTTCATAGCAAGCACAGAAACACAGGCTACGCTTACCAGTGGAAGCTTTTTTGGGATGATAAGTATCATAATGCAGTTGCGGAAAGTTTGTAATCATCCTGATCTCTTTGAGGGTCGTCCTATTGTAAGTTCTTTTGATATGGCTGGCATTGATGTGCAGTTGAGTTCAACAATCTGTTCGCTACTATTGGAAAGTCCGTTTTCCAAGGTTGATCTTGAGGCTTTGGGATTCTTATTCACCCATCTTGATTTTTCTATGACTTCTTGGGAAGGAGATGAGATCAAAGCTATTTCAACACCCTCAGAATTAATCAAACAGCGTGTGAACTTGAAGGATGATCTAGAAGCAATCCCTTTGAGTCCAAAAAACCGCAAAAATCTGCAAGGGACAAATATTTTTGAAGAAATTCGTAAGGCTGTCTTTGAGGAAAGGATACAAGAATCTAAGGATCGGGCAGCAGCCATTGCATGGTGGAATTCTTTGAGATGCCAGAGAAAGCCGACTTACTCTACATCACTAAGAACTCTTTTAACCATTAAGGGTCCTCTTGATGATCTTAAAGCTAACTGTTCATCTTACATGTATTCATCAATCCTCGCTGACATAGTCCTTTCACCAATCGAGCGTTTTCAGAAGATGATTGAGCTAGTTGAAGCTTTCACATTTGCGATTCCAGCTGCACGAGTGCCTTCACCTACTTGCTGGTGCAGTAAAAGTGACTCTCCTGTTTTTCTTAGTCCATCGTACAAGGAAAAAGTTACAGATTTATTGTCACCTCTTTTATCTCCAATTAGACCTGCAATCGTTAGGAGACAAGTATATTTTCCAGATAGGCGACTGATACAGTTTGATTGTGGTAAGCTGCAGGAGCTTGCTATGTTATTGAGGAAATTAAAATTTGGGGGTCACAGAGCGTTGATATTCACGCAAATGACCAAGATGCTTGACGTCTTGGAGGCTTTCATTAATTTATATGGTTATACCTACATGCGTCTTGATGGCTCTACACCTCCAGAAGAGAGGCAGACGTTAATGCAGCGGTTTAATACAAATCCCAAGATCTTTCTTTTCATTTTGTCAACCCGAAGTGGGGGCGTTGGCATCAACCTTGTGGGTGCGGACACAGTTATATTCTATGACAGTGACTGGAATCCTGCTATGGATCAACAAGCTCAAGATCGCTGCCACAGGATAGGTCAGACACGTGAAGTGCATATATACCGGTTGATAAGTGAGAGCACCATTGAGGAGAATATCTTAAAGAAAGCAAACCAGAAGCGTGTGCTTGATAACCTAGTAATTCAAAACGGTGAGTATAACACCGAATTTTTCAAGAAGCTCGATCCCATGGAATTGTTCTCTGGGCATAAGGCTCTGACTACAAAGGATGAAAAGGAAACAAGCAAGCATTGTGGGGCGGATATACCTCTATCAAATGCAGATGTTGAGGCTGCTCTAAAACAGGCCGAAGATGAGGCAGATTATATGGCTCTCAAAAGAGTAGAACAAGAAGAAGCTGTGGACAATCAAGAGTTCACAGAAGAACCTGTAGAGAGACCAGAAGACGATGAGCTAGTAAATGAAGATGACATAAAGGCTGATGAGCCTGCTGATCAAGGTTTAGTTGCAGCAGGGCCGGCCAAAGAAGAAATGTCATTGTTACATAGTGATATCAGGGATGAGAGAGCTGTTATCACTACTTCAAGCCAAGAAGATGACACTGATGTATTAGATGATGTCAAGCAAATGGCTGCAGCAGCGGCTGATGCTGGACAAGCTATCTCATCTTTTGAGAATCAGCTACGTCCTATTGATAGATATGCGATTAGATTTTTAGAGCTTTGGGACCCCATCATTGTTGAGGCTGCAATGGAAAATGAAGCAGGATTTGAAGAGAAAGAATGGGAACTTGACCACATTGAGAAGTACAAGGAGGAAATGGAAGCTGAGATTGATGATGGGGAAGAGCCTCTTGTTTACGAGAAATGGGATGCTGATTTTGCAACTGAGGCATACAGGCAGCAAGTGGAAGTCTTAGCTCAGCACCAGTTAATGGAAGATTTGGAAAATGAAGCTAGAGAGAGGGAAGCGGCAGAGGTGGCTGAAATGGTTTTGACACAGAACGAAAGTGCTCATGTACTGAAGCCTAAGAAGAAGAAAAAGGCGAAGAAAGCCAAATATAAATCCCTGAAGAAAGGATCACTGGCTGCCGAATCAAAACATGTGAAGTCAGTTGTGAAAATTGAAGATTCTACTGATGATGATAATGAAGAATTCGGCTATGTGAGTAGCAGTGACTCGGATATGGTTACACCGCTTTCGCGGATGCATATGAAGGGCAAGAAAAGAGATTTAATTGTTGACACTGATGAAGAGAAGACCTCAAAGAAGAAAGCAAAGAAGCACAAGAAGTCTCTCCCGAATTCAGATATCAAATATAAGCAAACAAGTGCACTACTTGATGAACTGGAACCATCAAAGCCGTCTGACAGTATGGTTGTTGATAATGAGTTGAAATTGACGAACAGGGGTAAAACTGTAGGGAAAAAATTCATCACTTCCATGCCAATAAAGCGTGTTCTTATGATCAAGCCAGAGAAATTGAAGAAAGGAAATCTGTGGTCTAGAGATTGTGTTCCCTCGCCTGATTCTTGGTTGCCGCAGGAAGATGCTATATTGTGTGCCATGGTTCATGAATATGGGCCTAACTGGAATTTTGTTAGCGGAACTCTTTATGGAATGACAGCTGGTGGGGCTTACAGAGGACGGTATCGGCATCCTGCATATTGTTGTGAGAGATATAGAGAGCTTATTCAACGACATATTTTGTCTGCTTCCGACAGTGCAGTGAACGAGAAGAACCTCAACACAGGTTCTGGGAAGGCTCTCCTTAAAGTCACTGAGGAAAATATTCGGACACTCCTAAATGTTGCAGCTGAGCAGCCAGATACGGAGATGCTCCTACAAAAACATTTTTCTTGCTTGCTGTCATCAATTTGGAGGACGTCTACCCGCACTGGGAATGATCAAATGCTCTCCTTAAACAGTCCTATTTTCAACAGACAGTTTATGGGTTCCGTGAATCACACCCAAGATTTAGCTAGAAAGCCTTGGCAGGGGATGAAGGTCACCAGCTTAAGTAGAAAGTTGTTAGAATCCGCTCTCCAGGATTCTGGCCCGAGTCAGCCAGACAATACTATTTCCCGTTCTAGGTTGCAGGAGACTCAACCTATCAATAAATTGGGATTAGAGTTAACCTTGGAATTCCCACGTGGCAATGATGATTCCCTGAATCAGTTTCCACCGATGATTAGTCTGTCCATTGATGGGTCAGATTCATTAAATTATGTGAACGAGCCCCCAGGGGAAGATGTTCTAAAAGGTTCTAGGGTTGCTGCAGAGAACCGTTACAGGAATGCTGCAAATGCTTGTATTGAAGATTCATTTGGATGGGCTTCAAACACGTTCCCAGCCAATGATCTGAAGTCAAGAACAGGCACGAAAGCACAGTCCCTGGGGAAACACAAGCTATCCGCCTCAGACTCAGCCAAGTCTACAAAAAGCAAACACCGCAAACTCTTAGCAGAGCAATTGGAAGGGGCATGGGTTAGGCCAAATGATCCGAATCTCAAGTTTGATTTCACACCTGGTGATAGGGAGGAGGAGGAGGAGCAGGAGGTGGATGAGAAAGCGAATTCAGCAGAGATAGAGATGATAAGCTGTTCACAATGGTATGATCCATTCTTTACCTCAGGCCTTGATGATTGCTCATTAGCTTCGGATATCTCAGAAATAGAGTAG
+          ")
+
+colnames <- c("qseqid",
+               "sseqid",
+               "pident",
+               "length",
+               "mismatch",
+               "gapopen",
+               "qstart",
+               "qend",
+               "sstart",
+               "send",
+               "evalue",
+               "bitscore")
+
+read_delim("../../static/pie1_utri.blastout", delim =  ",", col_names = colnames) -> pie1_blastout
+
+```
+
+```{r, echo = c(1,3), eval = c(2,3), }
+pie1
+pie1 %>% stringr::str_trunc(width = 100)
+pie1_blastout
+
+```
+
+{{% alert note %}}
+We need only the length of the original sequence to plot it as a line/segment. We will use coordinates to refer nucleotide positions from BLAST.
+```{r}
+pie1_len <- stringr::str_length(pie1)
+```
+{{% /alert %}}
+
+As you can see BLAST outputs smaller parts of a gene and it results id duplications. The same id matches should be plotted in one line, while every unique id (=gene) should go in a new line. Easily we will just group and nest the data to append a column with y coordinates and then unnest.
+
+```{r}
+
+pie1_blastout %>% 
+  group_by(qseqid, sseqid) %>% 
+  nest() %>%
+  mutate(y = sseqid %>% seq_along()) %>% 
+  unnest() -> pie1_blastout2
+
+pie1_blastout2
+
+```
+
+From here it is very easy to imagine the process. We will plot some vertical segments where ```y``` is the y coordinate (y and yend also, since it is vertical line), ```qstart``` and ```qend``` are the x coordinates and as on NCBI we can color the segments based on ```bitscore```.
+
+```{r, fig.align='center', fig.height=2}
+
+pie1_blastout2 %>%
+  ggplot() +
+  geom_segment(mapping = aes(x = qstart, xend = qend, y = y, yend = y, color = bitscore), size = 3) -> blast_plot
+blast_plot
+
+```
+
+Looks promising, but there are some missing features, like the query sequence, the bitscore color and proper spacing and formatting.
+
+First append the query sequence at y position = 0 with ```pie1_len``` and erase every formatting using ```theme()```. 
+
+```{r, fig.align='center', fig.height=3}
+blast_plot <- blast_plot +
+              geom_segment(data = tibble(y = 0, yend = 0, x = 1, xend = pie1_len), 
+                           aes(x = x, xend = xend, y = y, yend = yend),
+                           size = 2.5) + 
+              theme_classic() +
+              theme(axis.line.y = element_blank(),
+                    axis.ticks.y = element_blank(),
+                    axis.title.y = element_blank(),
+                    axis.text.y = element_blank(),
+                    legend.position = "top",## Here is the legend is hidden
+                    legend.direction = "horizontal",
+                    legend.key.width = unit(0.1,"npc")
+                    ) +
+              labs(x = "Query", title = "BLAST output") 
+              
+blast_plot
+```
+
+Now the only thing to do is to color the genes based on the bitscore properly. I would like to color in similar way as on NCBI, between 0 and 200, with several categorical colors. But I also want to use some gradient between them. The tricky thing is the 200 limit, since bitscore can be much higher then that. In our case the highest is `r pie1_blastout %>% select(bitscore) %>% max()`.
+
+```{r, fig.align='center', fig.height=3}
+
+blast_plot <- blast_plot + 
+              scale_color_gradientn(
+                  colours = c("grey", rainbow(5) %>% rev(), "red"), 
+                  limits = c(0,200), 
+                  na.value = "red", 
+                  values = c(0, 0.2, 0.3, 0.4, 0.5, 1)) +
+              scale_y_reverse() +
+              scale_x_continuous(position = "top")
+blast_plot
+
+```
+
+## PLOTLY
+
+[plotly]() is a great invention for interactive graphs, using D3.js graphical library. It has integration to Python (Jupyter), R, MatLab and JavaScript and also a web interface where you can just copy your data and visualize. Only one thing I did not like was the synthax in R, which was a little complicated, using a lot of ```~```. Also I was a little afraid to learn one more plotting synthax. However luckily it has a function called ```ggplotly()```, which allows you to write your plot in ggplot2 and it transforms to an interactive plotly chart. Also after that it is possible to add plotly-exclusive features to your chart, like extra control (buttons, sliders etc). It is good for interactive graphs, but in my opinion for some subfunction, there are better packages.
+
+
+```{r, fig.align='center', fig.height=3}
+
+blast_plot %>% 
+  ggplotly() %>%
+  layout(legend = list(orientation = 'h', xanchor = 'center', yanchor = 'top', x = 0, y = 0)) -> blast_plotly
+
+blast_plotly
+
+```
+
+As you can see it was a very quick and easy transformation of our ```ggplot``` to a ```plotly``` object, however it is not perfect. We can specify any plotly-related things from now since ```blast_plotly``` is a full plotly object, but the legends are tricky part and not yet solved the conversion from ggplot to plotly. In this case still we can convert "manually" everything and revrite the plotting code 
+
+```{r, fig.align='center', fig.height=3}
+blast_plotly %>% layout(hoveron = "fills")
+```
+
+
+```{r, fig.align='center', fig.height=3}
+
+p <- plot_ly() 
+
+
+for (i in seq_len(nrow(pie1_blastout2)-1)) {
+  p <- p %>%
+  add_trace(x = c(pie1_blastout2$qstart[i], pie1_blastout2$qend[i]), y = c(pie1_blastout2$y[i], pie1_blastout2$y[i]),
+            type = 'scatter',
+            mode = 'lines', 
+            line = list(color = 'red', width = 20),
+            showlegend = FALSE, 
+            hoverinfo = "text",
+            alpha = 0.5,
+            text = paste("Name: ", pie1_blastout2$sseqid[i],
+                         "<br>Position: ", pie1_blastout2$qstart[i], "-", pie1_blastout2$qend[i],
+                         "<br>Identity: ", pie1_blastout2$pident[i], "%",
+                         "<br>e-value: ", pie1_blastout2$evalue[i], 
+                         sep = ""))
+}
+p %>% layout(hovermode = "closest")
+
+```
+
+## HIGHCHARTER
+
+[highcharter]() uses yet another synthax, but it is slightly more familiar then plotly's, like you have to give aesthetics, but instead using ```aes()```, we need ```hcaes()```. Why I choosed highcharter is because its customization abilities (just look at the built-in themes) and hover functions. For some reason on a segment, plotly shows the hover text only on the endpoints. Highcharter capable to show on the whole segment, which is much better for our purpose. For a basic chart, let's see this code:
+
+
+```{r}
+library(highcharter)
+
+hchart_blast <- 
+  highchart(hc_opts = list(
+  chart = list(inverted = 'true'
+               ))) %>% 
+  hc_add_series(tibble(y = 0, x = 1, xend = pie1_len),
+                type = "columnrange",
+                hcaes(low = x,
+                      high = xend,
+                      x = y)) %>%
+  hc_add_series(pie1_blastout2, 
+                type = "columnrange", 
+                hcaes(low = qstart, 
+                      high = qend, 
+                      x = y,
+                      color = bitscore)) %>% 
+  hc_colorAxis() %>% 
+  hc_add_theme(hc_theme_null())
+
+hchart_blast
+
+
+```
+
+
+From this, we can start and modify as we wish, adding proper design and functionality (e.g. proper hovertext information). First see the design. Unfortunately the design is based on the javascript format and we should use a lot of list objects, which looks not so nice, but at least it can give us full access for the formatting.
+
+```{r}
+blast_theme <- hc_theme(
+  colors = c("dodgerblue", "hotpink", "darkorange", "lime"),
+  chart = list(
+    backgroundColor = NULL
+  ), 
+  title = list(
+    style = list(
+      color = "black"
+    )
+  ),
+  xAxis = list(
+    visible = FALSE
+  ),
+  yAxis = list(
+    gridLineWidth = 0,
+    lineWidth = 2,
+    lineColor = "black",
+    tickWidth = 1,
+    tickColor = "black"
+  ),
+  legend = list(
+    align = 'center',
+    verticalAlign = 'top',
+    layout = 'horizontal',
+    x = 0, 
+    y = 100
+  )
+)
+
+hchart_blast %>% hc_add_theme(blast_theme)
+  
+```

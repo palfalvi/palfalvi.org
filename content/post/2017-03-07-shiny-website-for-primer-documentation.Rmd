@@ -1,0 +1,108 @@
+---
+title: Shiny Website for Primer Documentation
+author: Gergo Palfalvi
+date: '2017-03-07'
+slug: shiny-website-for-primer-documentation
+draft: false
+categories:
+  - shiny
+  - primeR
+tags:
+  - R
+  - RStudio
+  - Shiny
+  - database
+  - bioinformatics
+summary: "Create a [Shiny](http://shiny.rstudio.com) webpage on a server to automatically maintain and protect primers' database with some extra function and a highly user-friendly interface."
+---
+
+
+
+I am working in a relatively big molecular biology laboratory where sometimes the common stocks and orders documentation can be a hassle. Recently I ran into one of this problem and decided to change the way to maintain  a documentation of our oligonucleotide storage. 
+
+{{% alert note %}}
+If you are not familiar with the term [*primer*](https://en.wikipedia.org/wiki/Primer_(molecular_biology)) and [*oligonicleotide*](https://en.wikipedia.org/wiki/Oligonucleotide), start on Wikipedia.
+{{% /alert %}}
+
+Since we keep track every single ordered oligonucleotide this laboratory ordered, now there are more then 10.000 records. Until now they deployed to a shared Excel file on a common server. There was several problem with this method, let me highlight a few:
+
+* You have to manually add the unique identifier for the tube (a number, indicating the location to be stored). It resulted duplicated, skipped and even mistyped IDs. 
+* You have to write the sequence manually or with Copy-Paste.
+* You can write any silly abbreviation for your name. Also can cause unidentifiable authors or authors with several types of entry names. 
+* If someone left it open on their machine, others cannot edit until it is not closed.
+* Difficult to run BLAST. If a lab already has 10.000+ primers, sometimes you just look up what you need instead of ordering new ones. [BLAST](https://blast.ncbi.nlm.nih.gov/Blast.cgi) can do this job, but it is not so convenient to update a local BLAST database from excel every time someone deploy some new records (a few times a day).
+* It is Excel. 
+* Again. It is Excel. Anyone easily could delete a few lines or even the whole document. No authorized access for any type of editing.
+
+
+Considering these, I decided to create a [Shiny](http://shiny.rstudio.com) webpage on our local server to automatically maintain and protect this database with some extra function and a highly user-friendly interface. I also would be able to distribute a backbone from this site on github if anyone has similar problems or just wants to use. Since this is a bigger project to put in one post and also some part is highly personalized to our laboratory, I will cover only some important parts, like some specific plotting and data processing, how to build up a shiny app within several posts. 
+
+
+## The basic ideas behind the webpage
+
+1. I would like to store the primer information in a database instead of a ```.csv``` or ```.xls``` file. My main candidates for this is [postgreSQL](https://www.postgresql.org) or [SQLite](https://www.sqlite.org), but it could be changed freely later. 
+
+2. I want an interface where people can deploy primers even by manually or uploading a file (which is usually  provided by the company we order from). This also should auto generate the unique IDs for the tubes.
+
+3. Ability to build a BLAST database from the database (probably through a ```.fasta``` file). This also should be triggered every time when new records are submitted (e.g. by button press or by monitoring the database time stamp). 
+
+4. Ability to access the server's BLAST engine from R/Shiny and to process the output in real time. 
+
+5. A view window for browsing among existing primers.
+
+6. Following up on availability of the primer. If someone finished a tube, make it possible to indicate it with also a possible reordering option and connecting the unique IDs.
+
+7. Overcome all of the cons mentioned above.
+
+
+Here is a diagram (created with the [DiagrammeR](http://rich-iannone.github.io/DiagrammeR/) package) about the core ideas:
+
+```{r setup, include = FALSE}
+library(htmlwidgets)
+library(shiny)
+library(DiagrammeR)
+```
+
+```{r, echo=FALSE, fig.align='center'}
+
+
+nodes <- create_node_df(n = 7, label = c(
+  "Primer Data Table \n (postgreSQL/\nSQLite)",
+  "New primer input",
+  "Create .fasta",
+  "Update blast database",
+  "BLAST search input",
+  "BLAST search output",
+  "Update"),
+  type = c(rep("A",6), rep("B",2)),
+  shape = c("database", "ellipse", "box", "box", "ellipse", "ellipse", "circle"),
+  style = "filled",
+  color = c("limegreen","orange", rep("dodgerblue",2), rep("orange", 2), rep("pink",1)),
+  font.size = 20,
+  shadow = list(enabled = TRUE, size = 10),
+  smooth = TRUE,
+  level = c(1, 4, 2, 2, 4, 4, 3)
+  )
+
+create_edge_df(from = 
+                 c(2,2,1,7,7,3,5,4),
+               to = 
+                 c(1,7,3,3,4,4,4,6),
+               rel ="") -> edges
+
+
+create_graph(nodes, edges) %>% render_graph(output = "visNetwork") %>% visNetwork::visHierarchicalLayout(direction = "LR", levelSeparation = 270, sortMethod = "directed")
+```
+
+
+## Extra functions
+
+* Create new primers using [Primer3](http://primer3.ut.ee) (and BLAST) in-app. For this, we have to manipulate the UNIX command line application from R. Luckily it is not so difficult. 
+
+Extending this possibility we can even search for gRNAs for our CRISPR experiments with non-model genomes we work with. And also just for keep everything nicely in one place.
+
+***
+
+In the next post I would like to show how to recreate an interactive graphical output from a BLAST search result, similar as you can see on the [BLAST](https://blast.ncbi.nlm.nih.gov/Blast.cgi) website after performing a search.
+
+
